@@ -1,6 +1,7 @@
 .env
 .python-version
 db.sqlite3
+*.geojson
 
 ### Python template
 # Byte-compiled / optimized / DLL files

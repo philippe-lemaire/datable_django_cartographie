@@ -69,3 +69,4 @@ coverage
 
 notebooks/
 */full_map.html
+maps/templates/maps/full_map.html

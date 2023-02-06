@@ -25,7 +25,7 @@ def display_map(request):
             subway_used = form.cleaned_data["subway_used"]
             stop_points_used = form.cleaned_data["stop_points_used"]
 
-            gen_maps(
+            m = gen_maps(
                 velov_used=velov_used,
                 trains_used=trains_used,
                 cars_used=cars_used,
@@ -34,6 +34,7 @@ def display_map(request):
                 stop_points_used=stop_points_used,
             )
 
+            #return render(request, "maps/display_map.html", context={'map': m._repr_html_()})
             return render(request, "maps/full_map.html")
 
     # if a GET (or any other method) we'll create a blank form

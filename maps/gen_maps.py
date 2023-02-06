@@ -213,4 +213,4 @@ def gen_maps(
     # save the map
     m.save(MAP_PATH)
     print(f"Map created at {EXPORT_PATH}")
-    return None
+    return m

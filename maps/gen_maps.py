@@ -4,6 +4,7 @@ import geopandas as gpd
 import folium
 import os
 import shutil
+import h3pandas
 
 DATA_FOLDER = "data/"
 EXPORT_PATH = "maps/templates/maps/"
@@ -31,6 +32,8 @@ def gen_maps(
     ]
 
     m = folium.Map(location=lyon, zoom_start=11, tiles=tiles[4])
+
+
 
     # kwargs for gpd.explore()
     kwargs = {
@@ -62,6 +65,23 @@ def gen_maps(
         else:
             print("Rien à ouvrir")
             return None
+
+
+    # get the communes shapes and resample them as hexagons
+    communes_url = "https://download.data.grandlyon.com/wfs/grandlyon?SERVICE=WFS&VERSION=2.0.0&request=GetFeature&typename=adr_voie_lieu.adrcomgl&outputFormat=application/json; subtype=geojson&SRSNAME=EPSG:4171"
+    communes_filename = "communes.geojson"
+    communes = get_data(communes_url, communes_filename)
+    # reduce the columns
+    communes_columns = ['nom', 'insee', 'geometry']
+    communes = communes[communes_columns]
+
+    # choice of resolution. The bigger the int, the smaller the hexagons 9 seems to
+    # be a happy medium
+    resolution = 9
+
+    # Resample to H3 cells
+    communes = communes.h3.polyfill_resample(resolution)
+    communes.explore(color="#CCC",tooltip=None, **kwargs)
 
     # Velov part
     if velov_used:

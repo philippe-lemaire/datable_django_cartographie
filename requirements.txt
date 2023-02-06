@@ -7,4 +7,5 @@ folium
 matplotlib
 mapclassify
 geopandas
+h3pandas
 requests

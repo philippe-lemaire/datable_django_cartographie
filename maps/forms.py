@@ -6,28 +6,36 @@ from crispy_forms.layout import Submit
 
 class TransportationModesForm(forms.Form):
     velov_used = forms.BooleanField(
-        label="Utilisez-vous les vélov’ ?",
+        label="Stations vélov",
         required=False,
     )
     trains_used = forms.BooleanField(
-        label="On garde les trains ?",
+        label="Gares ferroviaires",
         required=False,
     )
     cars_used = forms.BooleanField(
-        label="On utilise les infos stationnement ?",
+        label="Stationnements",
         required=False,
     )
     rhone_buses_used = forms.BooleanField(
-        label="On utilise les cars du Rhône ?",
+        label="Cars du Rhône",
         required=False,
     )
     subway_used = forms.BooleanField(
-        label="On utilise le métro ?",
+        label="Métro",
         required=False,
     )
 
     stop_points_used = forms.BooleanField(
-        label="On garde les points d'arrêt ?",
+        label="Points d’arrêt Transports en commun",
+        required=False,
+    )
+    taxis_used = forms.BooleanField(
+        label="Stations de taxis",
+        required=False,
+    )
+    river_boat_used = forms.BooleanField(
+        label="Stations navette fluviale",
         required=False,
     )
 

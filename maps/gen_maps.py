@@ -73,27 +73,17 @@ def gen_maps(
 
         velov = get_data(url_velov, velov_filename)
 
-        velov_columns = [
-            "number",
+        velovdf_columns = [
             "name",
             "address",
-            "address2",
             "commune",
-            "bike_stands",
-            "available_bike_stands",
-            "available_bikes",
-            "lat",
-            "lng",
             "geometry",
         ]
-
-        velov[velov_columns].explore(color="red", **kwargs)
 
         # aménagements cyclables
         ac_url = "https://download.data.grandlyon.com/wfs/grandlyon?SERVICE=WFS&VERSION=2.0.0&request=GetFeature&typename=pvo_patrimoine_voirie.pvoamenagementcyclable&outputFormat=application/json; subtype=geojson&SRSNAME=EPSG:4171"
         ac_filename = "amenagements_cyclables.geojson"
         ac = get_data(ac_url, ac_filename)
-        ac.explore(color="purple", **kwargs)
 
     # Position Gares
     if trains_used:
@@ -239,6 +229,9 @@ def gen_maps(
         hex_map = hex_map.reset_index()[["heat", "geometry"]]
         # add the hex_map to the global map with heat column
         hex_map.explore(column="heat", cmap="plasma", **kwargs)
+        # add velov points to the map after the hex_map
+        velov[velovdf_columns].explore(color="red", **kwargs)
+        ac.explore(color="purple", **kwargs)
 
     # add the hex map to the grid with no heat calc
     else:

@@ -18,6 +18,8 @@ def gen_maps(
     rhone_buses_used=False,
     subway_used=False,
     stop_points_used=False,
+    taxis_used=False,
+    river_boat_used=False,
 ):
     # map preparation
 
@@ -32,8 +34,6 @@ def gen_maps(
     ]
 
     m = folium.Map(location=lyon, zoom_start=11, tiles=tiles[4])
-
-
 
     # kwargs for gpd.explore()
     kwargs = {
@@ -65,23 +65,6 @@ def gen_maps(
         else:
             print("Rien à ouvrir")
             return None
-
-
-    # get the communes shapes and resample them as hexagons
-    communes_url = "https://download.data.grandlyon.com/wfs/grandlyon?SERVICE=WFS&VERSION=2.0.0&request=GetFeature&typename=adr_voie_lieu.adrcomgl&outputFormat=application/json; subtype=geojson&SRSNAME=EPSG:4171"
-    communes_filename = "communes.geojson"
-    communes = get_data(communes_url, communes_filename)
-    # reduce the columns
-    communes_columns = ['nom', 'insee', 'geometry']
-    communes = communes[communes_columns]
-
-    # choice of resolution. The bigger the int, the smaller the hexagons 9 seems to
-    # be a happy medium
-    resolution = 9
-
-    # Resample to H3 cells
-    communes = communes.h3.polyfill_resample(resolution)
-    communes.explore(color="#CCC",tooltip=None, **kwargs)
 
     # Velov part
     if velov_used:
@@ -207,6 +190,59 @@ def gen_maps(
         pa_columns = ["nom", "desserte", "pmr", "ascenseur", "escalator", "geometry"]
 
         pa[pa_columns].explore(color="orange", **kwargs)
+
+    if taxis_used:
+        ## taxis
+        taxis_url = "https://download.data.grandlyon.com/wfs/grandlyon?SERVICE=WFS&VERSION=2.0.0&request=GetFeature&typename=pvo_patrimoine_voirie.pvostationtaxi&outputFormat=application/json; subtype=geojson&SRSNAME=EPSG:4171"
+        taxis_filename = "stations_taxi.geojson"
+        taxis = get_data(taxis_url, taxis_filename)
+        taxis_columns = ["nom", "gid", "geometry"]
+        taxis = taxis[taxis_columns]
+        # add them to the map
+        taxis.explore(color="black", **kwargs)
+
+    if river_boat_used:
+        # points arrêt navette fluviale
+        navette_fluviale_url = "https://download.data.grandlyon.com/wfs/rdata?SERVICE=WFS&VERSION=2.0.0&request=GetFeature&typename=tca_transports_alternatifs.tcaarretvaporetto&outputFormat=application/json; subtype=geojson&SRSNAME=EPSG:4171"
+        navette_fluviale_filename = "navette_fluviale.geojson"
+        navette_fluviale = get_data(navette_fluviale_url, navette_fluviale_filename)
+        navette_fluviale_columns = ["nom", "gid", "geometry"]
+        navette_fluviale = navette_fluviale[navette_fluviale_columns]
+        # add them to the map
+        navette_fluviale.explore(color="lime", **kwargs)
+
+    ## HEX GRID Part
+    # get the communes shapes and resample them as hexagons
+    communes_url = "https://download.data.grandlyon.com/wfs/grandlyon?SERVICE=WFS&VERSION=2.0.0&request=GetFeature&typename=adr_voie_lieu.adrcomgl&outputFormat=application/json; subtype=geojson&SRSNAME=EPSG:4171"
+    communes_filename = "communes.geojson"
+    hex_map = get_data(communes_url, communes_filename)
+
+    # reduce the columns
+    hex_map_columns = ["nom", "geometry"]
+    hex_map = hex_map[hex_map_columns]
+
+    # choice of resolution. The bigger the int, the smaller the hexagons 9 seems to
+    # be a happy medium
+    resolution = 9
+
+    # Resample to H3 cells
+    hex_map = hex_map.h3.polyfill_resample(resolution)
+    if velov_used:
+        # compute for each velov station where it counts on the hex grid
+        for index, (gid, point) in velov[["gid", "geometry"]].iterrows():
+            hex_map[f"velov_{gid}"] = hex_map.geometry.contains(point)
+        # select the columns created above
+        velov_cols = [name for name in hex_map.columns if name.startswith("velov_")]
+        # sum the columns horizontally to get the number of velov station on each hex
+        hex_map["heat"] = hex_map[velov_cols].sum(axis=1)
+        # drop the unused columns
+        hex_map = hex_map.reset_index()[["heat", "geometry"]]
+        # add the hex_map to the global map with heat column
+        hex_map.explore(column="heat", cmap="plasma", **kwargs)
+
+    # add the hex map to the grid with no heat calc
+    else:
+        hex_map.explore(color="#CCC", tooltip=None, **kwargs)
 
     # create the export path
     os.makedirs(EXPORT_PATH, exist_ok=True)

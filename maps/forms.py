@@ -14,7 +14,7 @@ class TransportationModesForm(forms.Form):
         required=False,
     )
     cars_used = forms.BooleanField(
-        label="Stationnements",
+        label="Voitures, autopartage et stationnement",
         required=False,
     )
     rhone_buses_used = forms.BooleanField(

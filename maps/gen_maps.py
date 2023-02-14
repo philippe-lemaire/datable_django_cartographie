@@ -140,7 +140,7 @@ def gen_maps(
     # kwargs for gpd.explore()
     kwargs = {
         "m": m,
-        "marker_kwds": {"radius": 1},
+        "marker_kwds": {"radius": 3},
     }
 
     # Velov part

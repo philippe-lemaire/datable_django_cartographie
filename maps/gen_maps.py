@@ -66,6 +66,23 @@ def gen_maps(
             print("Rien à ouvrir")
             return None
 
+    def compute_heat_from_points(hex_map, df, colname, coeff):
+        # on itere sur chaque ligne de la dataframe df, et donc sur chaque point positionné
+        for index, (gid, point) in df[["gid", "geometry"]].iterrows():
+            # on stocke le résultat du test "l'hexagone contient ce point" dans une colonne de la table hex_map créée à ce effet
+            hex_map[f"{colname}_{gid}"] = hex_map.geometry.contains(point)
+
+        # On constitue la liste des colonnes ainsi créée
+        column_names = [
+            name for name in hex_map.columns if name.startswith(f"{colname}_")
+        ]
+
+        # On crée une colonne 'heat' dans hex_map avec la somme des lignes : un dénombrement des stations de vélov présentes dans le hex
+        hex_map["heat"] += hex_map[column_names].sum(axis=1) * coeff
+        hex_map = hex_map[["nom", "geometry", "heat"]]
+        print(f"hex_map mise à jour avec les {index} points de la dataframe")
+        return hex_map
+
     # Velov part
     if velov_used:
         url_velov = "https://download.data.grandlyon.com/wfs/rdata?SERVICE=WFS&VERSION=2.0.0&request=GetFeature&typename=jcd_jcdecaux.jcdvelov&outputFormat=application/json; subtype=geojson&SRSNAME=EPSG:4171"
@@ -210,6 +227,7 @@ def gen_maps(
     # reduce the columns
     hex_map_columns = ["nom", "geometry"]
     hex_map = hex_map[hex_map_columns]
+    hex_map["heat"] = 0
 
     # choice of resolution. The bigger the int, the smaller the hexagons 9 seems to
     # be a happy medium
@@ -217,26 +235,21 @@ def gen_maps(
 
     # Resample to H3 cells
     hex_map = hex_map.h3.polyfill_resample(resolution)
+
+    # compute heat
     if velov_used:
-        # compute for each velov station where it counts on the hex grid
-        for index, (gid, point) in velov[["gid", "geometry"]].iterrows():
-            hex_map[f"velov_{gid}"] = hex_map.geometry.contains(point)
-        # select the columns created above
-        velov_cols = [name for name in hex_map.columns if name.startswith("velov_")]
-        # sum the columns horizontally to get the number of velov station on each hex
-        hex_map["heat"] = hex_map[velov_cols].sum(axis=1)
-        # drop the unused columns
-        hex_map = hex_map.reset_index()[["heat", "geometry"]]
-        # add the hex_map to the global map with heat column
-        hex_map.explore(column="heat", cmap="plasma", **kwargs)
-        # add velov points to the map after the hex_map
-        velov[velovdf_columns].explore(color="red", **kwargs)
-        ac.explore(color="purple", **kwargs)
+        hex_map = compute_heat_from_points(hex_map, velov, "velov", coeff=1)
 
-    # add the hex map to the grid with no heat calc
-    else:
-        hex_map.explore(color="#CCC", tooltip=None, **kwargs)
+    if cars_used:
+        # on va refaire la même chose avec autopartage
+        hex_map = compute_heat_from_points(hex_map, autopartage, "autopartage", coeff=3)
 
+    ## add the hex_map with heat first, then the points
+    hex_map.explore(column="heat", cmap="plasma", **kwargs)
+    if velov_used:
+        velov[velovdf_columns].explore(color="green", **kwargs)
+    if cars_used:
+        autopartage.explore(color="grey", **kwargs)
     # create the export path
     os.makedirs(EXPORT_PATH, exist_ok=True)
     # save the map

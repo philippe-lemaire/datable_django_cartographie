@@ -5,10 +5,112 @@ import folium
 import os
 import shutil
 import h3pandas
+import warnings
+
+warnings.simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
 
 DATA_FOLDER = "data/"
 EXPORT_PATH = "maps/templates/maps/"
 MAP_PATH = EXPORT_PATH + "full_map.html"
+
+
+def download_file(url, filename):
+    os.makedirs(DATA_FOLDER, exist_ok=True)
+    if filename in os.listdir(DATA_FOLDER):
+        print(f"Fichier {filename} déjà téléchargé")
+        return True
+    response = requests.get(url)
+    if response.status_code == 200:
+        with open(f"{DATA_FOLDER}{filename}", "wb") as file:
+            file.write(response.content)
+        print(f"Fichier {filename} enregistré")
+        return True
+    else:
+        print(f"La requête n’a pas abouti : status {response.status_code}.")
+        return False
+
+
+def get_data(url, filename):
+    if download_file(url, filename):
+        if filename.endswith("csv"):
+            return pd.read_csv(f"{DATA_FOLDER}{filename}", sep=";")
+        elif filename.endswith("geojson"):
+            return gpd.read_file(f"{DATA_FOLDER}{filename}")
+    else:
+        print("Rien à ouvrir")
+        return None
+
+
+def compute_heat_from_points(hex_map, df, colname, coeff):
+    # on itere sur chaque ligne de la dataframe df, et donc sur chaque point positionné
+    for index, (gid, point) in df[["gid", "geometry"]].iterrows():
+        # on stocke le résultat du test "l'hexagone contient ce point" dans une colonne de la table hex_map créée à ce effet
+        hex_map[f"{colname}_{gid}"] = hex_map.geometry.contains(point)
+
+    # On constitue la liste des colonnes ainsi créée
+    column_names = [name for name in hex_map.columns if name.startswith(f"{colname}_")]
+
+    # On crée une colonne 'heat' dans hex_map avec la somme des lignes : un dénombrement des stations de vélov présentes dans le hex
+    hex_map["heat"] += hex_map[column_names].sum(axis=1) * coeff
+    hex_map = hex_map[["nom", "geometry", "heat"]]
+    print(f"hex_map mise à jour avec les {index} points de la dataframe")
+    return hex_map
+
+
+def compute_heat_train_station(hex_map, df, colname="gare", coeff=5):
+    """#compute_heat_train_station : avoir un moyen que les gares rayonnent leur chaleur sur les hexagones qui les contiennent et les adjacents"""
+
+    for index, (gid, polygon) in df[["gid", "geometry"]].iterrows():
+        # on stocke le résultat du test "l'hexagone contient cette gare" ou bien la gare et l'hexagone overlappent dans une colonne de la table hex_map créée à ce effet
+        hex_map[f"{colname}_contains_{gid}"] = hex_map.geometry.contains(polygon)
+        hex_map[f"{colname}_overlaps_{gid}"] = hex_map.geometry.overlaps(polygon)
+
+        # On constitue la liste des colonnes ainsi créées
+        column_names = [
+            name for name in hex_map.columns if name.startswith(f"{colname}_")
+        ]
+
+        # On crée une colonne "has_trainstation" dans hex_map
+        hex_map["has_train_station"] = hex_map[column_names].sum(axis=1) >= 1
+
+    # on ajoute une colonne : 'close_to_train_station'
+    hex_map["close_to_train_station"] = False
+
+    # d'abord on calcule la liste des hex adjacents à chaque hex
+    hex_map = hex_map.h3.hex_ring()
+
+    # on itère sur chaque ligne, et sur chaque hex indiqué dans la colonne h3_hex_ring
+    for i, row in hex_map.iterrows():
+        if row.has_train_station:  # si on a une gare sur l'hexagone
+            for (
+                hex_code
+            ) in row.h3_hex_ring:  # on prend la liste des hexagones adjacents
+                try:
+                    if not hex_map.loc[
+                        hex_code, "has_train_station"
+                    ]:  # s'il n’y a pas déjà une gare dessus
+                        hex_map.loc[
+                            hex_code, "close_to_train_station"
+                        ] = True  # on le flagge comme voisin d'une gare
+                except (KeyError):
+                    pass
+
+    # on retire les lignes avec des nans ajoutés
+    hex_map = hex_map.dropna(axis=0)
+    # on calcule la heat : +coeff si has_train_station, +coeff/2 si close_to_train_station and not has_train_station
+    hex_map["heat"] += (
+        hex_map["has_train_station"] * coeff
+        + hex_map["close_to_train_station"] * coeff / 2
+    )
+
+    # on limite hex_map aux colonnes qui nous intéressent
+    hex_map_columns = [
+        "nom",
+        "geometry",
+        "heat",
+    ]
+    hex_map = hex_map[hex_map_columns]
+    return hex_map
 
 
 def gen_maps(
@@ -38,50 +140,8 @@ def gen_maps(
     # kwargs for gpd.explore()
     kwargs = {
         "m": m,
-        "marker_kwds": {"radius": 3},
+        "marker_kwds": {"radius": 1},
     }
-
-    def download_file(url, filename):
-        os.makedirs(DATA_FOLDER, exist_ok=True)
-        if filename in os.listdir(DATA_FOLDER):
-            print(f"Fichier {filename} déjà téléchargé")
-            return True
-        response = requests.get(url)
-        if response.status_code == 200:
-            with open(f"{DATA_FOLDER}{filename}", "wb") as file:
-                file.write(response.content)
-            print(f"Fichier {filename} enregistré")
-            return True
-        else:
-            print(f"La requête n’a pas abouti : status {response.status_code}.")
-            return False
-
-    def get_data(url, filename):
-        if download_file(url, filename):
-            if filename.endswith("csv"):
-                return pd.read_csv(f"{DATA_FOLDER}{filename}", sep=";")
-            elif filename.endswith("geojson"):
-                return gpd.read_file(f"{DATA_FOLDER}{filename}")
-        else:
-            print("Rien à ouvrir")
-            return None
-
-    def compute_heat_from_points(hex_map, df, colname, coeff):
-        # on itere sur chaque ligne de la dataframe df, et donc sur chaque point positionné
-        for index, (gid, point) in df[["gid", "geometry"]].iterrows():
-            # on stocke le résultat du test "l'hexagone contient ce point" dans une colonne de la table hex_map créée à ce effet
-            hex_map[f"{colname}_{gid}"] = hex_map.geometry.contains(point)
-
-        # On constitue la liste des colonnes ainsi créée
-        column_names = [
-            name for name in hex_map.columns if name.startswith(f"{colname}_")
-        ]
-
-        # On crée une colonne 'heat' dans hex_map avec la somme des lignes : un dénombrement des stations de vélov présentes dans le hex
-        hex_map["heat"] += hex_map[column_names].sum(axis=1) * coeff
-        hex_map = hex_map[["nom", "geometry", "heat"]]
-        print(f"hex_map mise à jour avec les {index} points de la dataframe")
-        return hex_map
 
     # Velov part
     if velov_used:
@@ -109,8 +169,6 @@ def gen_maps(
 
         gares = get_data(gares_url, gares_filename)
         gares_columns = ["nom", "theme", "soustheme", "geometry"]
-
-        gares[gares_columns].explore(color="gray", **kwargs)
 
     if cars_used:
         # infos stationnement
@@ -243,13 +301,20 @@ def gen_maps(
     if cars_used:
         # on va refaire la même chose avec autopartage
         hex_map = compute_heat_from_points(hex_map, autopartage, "autopartage", coeff=3)
+    if trains_used:
+        hex_map = compute_heat_train_station(hex_map, gares)
 
     ## add the hex_map with heat first, then the points
     hex_map.explore(column="heat", cmap="plasma", **kwargs)
+
+    ## add the geometries from datasets used after the hexagon tiles
     if velov_used:
         velov[velovdf_columns].explore(color="green", **kwargs)
     if cars_used:
         autopartage.explore(color="grey", **kwargs)
+
+    if trains_used:
+        gares[gares_columns].explore(color="gray", **kwargs)
     # create the export path
     os.makedirs(EXPORT_PATH, exist_ok=True)
     # save the map

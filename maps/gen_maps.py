@@ -3,7 +3,6 @@ import pandas as pd
 import geopandas as gpd
 import folium
 import os
-import shutil
 import h3pandas
 import warnings
 
@@ -42,6 +41,7 @@ def get_data(url, filename):
 
 
 def compute_heat_from_points(hex_map, df, colname, coeff):
+    """Computes heat based on points being contained on hexagons on the hex maps"""
     # on itere sur chaque ligne de la dataframe df, et donc sur chaque point positionné
     for index, (gid, point) in df[["gid", "geometry"]].iterrows():
         # on stocke le résultat du test "l'hexagone contient ce point" dans une colonne de la table hex_map créée à ce effet
@@ -51,6 +51,23 @@ def compute_heat_from_points(hex_map, df, colname, coeff):
     column_names = [name for name in hex_map.columns if name.startswith(f"{colname}_")]
 
     # On crée une colonne 'heat' dans hex_map avec la somme des lignes : un dénombrement des stations de vélov présentes dans le hex
+    hex_map["heat"] += hex_map[column_names].sum(axis=1) * coeff
+    hex_map = hex_map[["nom", "geometry", "heat"]]
+    print(f"hex_map mise à jour avec les {index} points de la dataframe")
+    return hex_map
+
+
+def compute_heat_from_lines(hex_map, df, colname, coeff):
+    """Computes heat based on lines crossing hexagons on the hex map"""
+    # on itere sur chaque ligne de la dataframe df, et donc sur chaque point positionné
+    for index, (gid, line) in df[["gid", "geometry"]].iterrows():
+        # on stocke le résultat du test "l'hexagone contient ce point" dans une colonne de la table hex_map créée à ce effet
+        hex_map[f"{colname}_{gid}"] = hex_map.geometry.crosses(line)
+
+    # On constitue la liste des colonnes ainsi créée
+    column_names = [name for name in hex_map.columns if name.startswith(f"{colname}_")]
+
+    # On incrémente la colonne 'heat' dans hex_map avec la somme des lignes : un dénombrement des stations de vélov présentes dans le hex multiplié par le coeff
     hex_map["heat"] += hex_map[column_names].sum(axis=1) * coeff
     hex_map = hex_map[["nom", "geometry", "heat"]]
     print(f"hex_map mise à jour avec les {index} points de la dataframe")
@@ -135,7 +152,7 @@ def gen_maps(
         "CartoDB dark_matter",
     ]
 
-    m = folium.Map(location=lyon, zoom_start=11, tiles=tiles[4])
+    m = folium.Map(location=lyon, zoom_start=11, tiles=tiles[0])
 
     # kwargs for gpd.explore()
     kwargs = {
@@ -297,6 +314,7 @@ def gen_maps(
     # compute heat
     if velov_used:
         hex_map = compute_heat_from_points(hex_map, velov, "velov", coeff=1)
+        hex_map = compute_heat_from_lines(hex_map, ac, "ac", coeff=0.5)
 
     if cars_used:
         # on va refaire la même chose avec autopartage
@@ -305,11 +323,17 @@ def gen_maps(
         hex_map = compute_heat_train_station(hex_map, gares)
 
     ## add the hex_map with heat first, then the points
-    hex_map.explore(column="heat", cmap="plasma", **kwargs)
+    hex_map.explore(
+        column="heat",
+        cmap="plasma",
+        **kwargs,
+    )
 
     ## add the geometries from datasets used after the hexagon tiles
     if velov_used:
         velov[velovdf_columns].explore(color="green", **kwargs)
+        ac.explore(color="green", **kwargs)
+
     if cars_used:
         autopartage.explore(color="grey", **kwargs)
 

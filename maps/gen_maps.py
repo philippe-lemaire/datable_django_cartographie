@@ -209,9 +209,7 @@ def gen_maps(
 
         parkings_url = "https://download.data.grandlyon.com/wfs/grandlyon?SERVICE=WFS&VERSION=2.0.0&request=GetFeature&typename=pvo_patrimoine_voirie.pvoparking&outputFormat=application/json; subtype=geojson&SRSNAME=EPSG:4171"
         parkings_filename = "parkings.geojson"
-
         parkings = get_data(parkings_url, parkings_filename)
-
         parkings_columns = [
             "nom",
             "commune",
@@ -330,9 +328,6 @@ def gen_maps(
     if own_bike_used or velov_used:
         hex_map = compute_heat_from_lines(hex_map, ac, "ac", coeff=0.5)
 
-    if cars_used:
-        # on va refaire la même chose avec autopartage
-        hex_map = compute_heat_from_points(hex_map, autopartage, "autopartage", coeff=3)
     if trains_used:
         hex_map = compute_heat_train_station(hex_map, gares)
 

@@ -152,7 +152,7 @@ def gen_maps(
         "CartoDB dark_matter",
     ]
 
-    m = folium.Map(location=lyon, zoom_start=11, tiles=tiles[4])
+    m = folium.Map(location=lyon, zoom_start=11, tiles=tiles[4], control_scale=True)
 
     # kwargs for gpd.explore()
     kwargs = {

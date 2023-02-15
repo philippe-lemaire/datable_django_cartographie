@@ -305,8 +305,6 @@ def gen_maps(
         navette_fluviale = get_data(navette_fluviale_url, navette_fluviale_filename)
         navette_fluviale_columns = ["nom", "gid", "geometry"]
         navette_fluviale = navette_fluviale[navette_fluviale_columns]
-        # add them to the map
-        navette_fluviale.explore(color="lime", **kwargs)
 
     ## HEX GRID Part
     # get the communes shapes and resample them as hexagons
@@ -347,6 +345,11 @@ def gen_maps(
     if public_transports_used:
         hex_map = compute_heat_from_points(hex_map, pa, "points_access", coeff=2)
 
+    if river_boat_used:
+        hex_map = compute_heat_train_station(
+            hex_map, navette_fluviale, "navette_fluv", coeff=1
+        )
+
     ## add the hex_map with heat first, then the points
     hex_map.explore(
         column="heat",
@@ -373,6 +376,10 @@ def gen_maps(
 
     if public_transports_used:
         pa.explore(color="orange", **kwargs)
+
+    if river_boat_used:
+        # add them to the map
+        navette_fluviale.explore(color="lime", **kwargs)
     # create the export path
     os.makedirs(EXPORT_PATH, exist_ok=True)
     # save the map

@@ -295,8 +295,6 @@ def gen_maps(
         taxis = get_data(taxis_url, taxis_filename)
         taxis_columns = ["nom", "gid", "geometry"]
         taxis = taxis[taxis_columns]
-        # add them to the map
-        taxis.explore(color="black", **kwargs)
 
     if river_boat_used:
         # points arrêt navette fluviale
@@ -349,6 +347,8 @@ def gen_maps(
         hex_map = compute_heat_train_station(
             hex_map, navette_fluviale, "navette_fluv", coeff=1
         )
+    if taxis_used:
+        hex_map = compute_heat_from_points(hex_map, taxis, "taxis", coeff=1)
 
     ## add the hex_map with heat first, then the points
     hex_map.explore(
@@ -378,8 +378,10 @@ def gen_maps(
         pa.explore(color="orange", **kwargs)
 
     if river_boat_used:
-        # add them to the map
         navette_fluviale.explore(color="lime", **kwargs)
+
+    if taxis_used:
+        taxis.explore(color="black", **kwargs)
     # create the export path
     os.makedirs(EXPORT_PATH, exist_ok=True)
     # save the map

@@ -364,8 +364,8 @@ def gen_maps(
     if velov_used:
         velov[velovdf_columns].explore(color="green", **kwargs)
 
-    if own_bike_used or velov_used:
-        ac.explore(color="green", **kwargs)
+    # if own_bike_used or velov_used:
+    #   ac.explore(color="green", **kwargs)
 
     if cars_used:
         parkings.explore(color="blue", **kwargs)

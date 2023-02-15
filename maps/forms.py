@@ -25,13 +25,8 @@ class TransportationModesForm(forms.Form):
         label="Cars du Rhône",
         required=False,
     )
-    subway_used = forms.BooleanField(
-        label="Métro",
-        required=False,
-    )
-
-    stop_points_used = forms.BooleanField(
-        label="Points d’arrêt Transports en commun",
+    public_transports_used = forms.BooleanField(
+        label="Transports en commun (métro, bus, tramway)",
         required=False,
     )
     taxis_used = forms.BooleanField(

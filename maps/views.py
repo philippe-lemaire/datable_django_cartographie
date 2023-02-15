@@ -23,8 +23,7 @@ def display_map(request):
             trains_used = form.cleaned_data["trains_used"]
             cars_used = form.cleaned_data["cars_used"]
             rhone_buses_used = form.cleaned_data["rhone_buses_used"]
-            subway_used = form.cleaned_data["subway_used"]
-            stop_points_used = form.cleaned_data["stop_points_used"]
+            public_transports_used = form.cleaned_data["public_transports_used"]
             taxis_used = form.cleaned_data["taxis_used"]
             river_boat_used = form.cleaned_data["river_boat_used"]
 
@@ -34,8 +33,7 @@ def display_map(request):
                 trains_used=trains_used,
                 cars_used=cars_used,
                 rhone_buses_used=rhone_buses_used,
-                subway_used=subway_used,
-                stop_points_used=stop_points_used,
+                public_transports_used=public_transports_used,
                 taxis_used=taxis_used,
                 river_boat_used=river_boat_used,
             )

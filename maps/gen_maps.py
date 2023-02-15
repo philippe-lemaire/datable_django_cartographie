@@ -136,8 +136,7 @@ def gen_maps(
     trains_used=False,
     cars_used=False,
     rhone_buses_used=False,
-    subway_used=False,
-    stop_points_used=False,
+    public_transports_used=False,
     taxis_used=False,
     river_boat_used=False,
 ):
@@ -272,24 +271,22 @@ def gen_maps(
 
         cars.explore(color="lime", **kwargs)
 
-    if subway_used:
-        ## metro
-        metro_url = "https://download.data.grandlyon.com/wfs/rdata?SERVICE=WFS&VERSION=2.0.0&request=GetFeature&typename=tcl_sytral.tclstation&outputFormat=application/json; subtype=geojson&SRSNAME=EPSG:4171"
-        metro_filename = "metro_entrees_sorties.geojson"
-
-        metro = get_data(metro_url, metro_filename)
-        metro_columns = ["nom", "desserte", "geometry"]
-        metro[metro_columns].explore(**kwargs)
-
-    if stop_points_used:
+    if public_transports_used:
         ## Points d'arrêt
 
         points_arret_url = "https://download.data.grandlyon.com/wfs/rdata?SERVICE=WFS&VERSION=2.0.0&request=GetFeature&typename=tcl_sytral.tclarret&outputFormat=application/json; subtype=geojson&SRSNAME=EPSG:4171"
         points_arret_filename = "points_arret.geojson"
         pa = get_data(points_arret_url, points_arret_filename)
-        pa_columns = ["nom", "desserte", "pmr", "ascenseur", "escalator", "geometry"]
-
-        pa[pa_columns].explore(color="orange", **kwargs)
+        pa_columns = [
+            "nom",
+            "desserte",
+            "pmr",
+            "ascenseur",
+            "escalator",
+            "gid",
+            "geometry",
+        ]
+        pa = pa[pa_columns]
 
     if taxis_used:
         ## taxis
@@ -347,6 +344,9 @@ def gen_maps(
     if trains_used:
         hex_map = compute_heat_train_station(hex_map, gares)
 
+    if public_transports_used:
+        hex_map = compute_heat_from_points(hex_map, pa, "points_access", coeff=2)
+
     ## add the hex_map with heat first, then the points
     hex_map.explore(
         column="heat",
@@ -371,6 +371,8 @@ def gen_maps(
     if trains_used:
         gares[gares_columns].explore(color="gray", **kwargs)
 
+    if public_transports_used:
+        pa.explore(color="orange", **kwargs)
     # create the export path
     os.makedirs(EXPORT_PATH, exist_ok=True)
     # save the map

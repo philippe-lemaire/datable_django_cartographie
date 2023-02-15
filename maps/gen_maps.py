@@ -131,6 +131,7 @@ def compute_heat_train_station(hex_map, df, colname="gare", coeff=5):
 
 
 def gen_maps(
+    own_bike_used=False,
     velov_used=False,
     trains_used=False,
     cars_used=False,
@@ -152,13 +153,30 @@ def gen_maps(
         "CartoDB dark_matter",
     ]
 
-    m = folium.Map(location=lyon, zoom_start=11, tiles=tiles[0])
+    m = folium.Map(location=lyon, zoom_start=11, tiles=tiles[4])
 
     # kwargs for gpd.explore()
     kwargs = {
         "m": m,
         "marker_kwds": {"radius": 3},
     }
+    # own_bike_used part
+
+    if own_bike_used:
+        stationnement_velo_url = "https://download.data.grandlyon.com/wfs/grandlyon?SERVICE=WFS&VERSION=2.0.0&request=GetFeature&typename=pvo_patrimoine_voirie.pvostationnementvelo&outputFormat=application/json; subtype=geojson&SRSNAME=EPSG:4171"
+        stationnement_velo_filename = "stationnement_velo.geojson"
+        stationnement_velo = get_data(
+            stationnement_velo_url, stationnement_velo_filename
+        )
+        # on filtre les stationnements seulement en projet
+        stationnement_velo = stationnement_velo[
+            stationnement_velo.avancement == "Existant"
+        ]
+
+        # aménagements cyclables
+        ac_url = "https://download.data.grandlyon.com/wfs/grandlyon?SERVICE=WFS&VERSION=2.0.0&request=GetFeature&typename=pvo_patrimoine_voirie.pvoamenagementcyclable&outputFormat=application/json; subtype=geojson&SRSNAME=EPSG:4171"
+        ac_filename = "amenagements_cyclables.geojson"
+        ac = get_data(ac_url, ac_filename)
 
     # Velov part
     if velov_used:
@@ -312,8 +330,15 @@ def gen_maps(
     hex_map = hex_map.h3.polyfill_resample(resolution)
 
     # compute heat
+    if own_bike_used:
+        hex_map = compute_heat_from_points(
+            hex_map, stationnement_velo, "stationnement_velo", coeff=1
+        )
+
     if velov_used:
         hex_map = compute_heat_from_points(hex_map, velov, "velov", coeff=1)
+
+    if own_bike_used or velov_used:
         hex_map = compute_heat_from_lines(hex_map, ac, "ac", coeff=0.5)
 
     if cars_used:
@@ -326,12 +351,18 @@ def gen_maps(
     hex_map.explore(
         column="heat",
         cmap="plasma",
+        style_kwds={"opacity": 0.05},
         **kwargs,
     )
 
     ## add the geometries from datasets used after the hexagon tiles
+    if own_bike_used:
+        stationnement_velo.explore(color="green", **kwargs)
+
     if velov_used:
         velov[velovdf_columns].explore(color="green", **kwargs)
+
+    if own_bike_used or velov_used:
         ac.explore(color="green", **kwargs)
 
     if cars_used:
@@ -339,6 +370,7 @@ def gen_maps(
 
     if trains_used:
         gares[gares_columns].explore(color="gray", **kwargs)
+
     # create the export path
     os.makedirs(EXPORT_PATH, exist_ok=True)
     # save the map

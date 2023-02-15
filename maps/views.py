@@ -18,6 +18,7 @@ def display_map(request):
         # check whether it's valid:
         if form.is_valid():
             # retrieve the values from the form
+            own_bike_used = form.cleaned_data["own_bike_used"]
             velov_used = form.cleaned_data["velov_used"]
             trains_used = form.cleaned_data["trains_used"]
             cars_used = form.cleaned_data["cars_used"]
@@ -28,6 +29,7 @@ def display_map(request):
             river_boat_used = form.cleaned_data["river_boat_used"]
 
             m = gen_maps(
+                own_bike_used=own_bike_used,
                 velov_used=velov_used,
                 trains_used=trains_used,
                 cars_used=cars_used,

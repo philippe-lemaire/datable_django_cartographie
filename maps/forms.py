@@ -5,8 +5,12 @@ from crispy_forms.layout import Submit
 
 
 class TransportationModesForm(forms.Form):
+    own_bike_used = velov_used = forms.BooleanField(
+        label="Vous utilisez votre vélo",
+        required=False,
+    )
     velov_used = forms.BooleanField(
-        label="Stations vélov",
+        label="Vous utilisez le service Vélov’",
         required=False,
     )
     trains_used = forms.BooleanField(
@@ -14,7 +18,7 @@ class TransportationModesForm(forms.Form):
         required=False,
     )
     cars_used = forms.BooleanField(
-        label="Voitures, autopartage et stationnement",
+        label="Voitures, autopartage et stationnement auto",
         required=False,
     )
     rhone_buses_used = forms.BooleanField(

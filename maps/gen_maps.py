@@ -234,17 +234,15 @@ def gen_maps(
             # 'fermeture',
             # 'observation',
             # 'codetype',
+            "gid",
             "geometry",
         ]
-
-        parkings[parkings_columns].explore(color="blue", **kwargs)
+        parkings = parkings[parkings_columns]
 
         # infos autopartage
         autopartage_url = "https://download.data.grandlyon.com/wfs/grandlyon?SERVICE=WFS&VERSION=2.0.0&request=GetFeature&typename=pvo_patrimoine_voirie.pvostationautopartage&outputFormat=application/json; subtype=geojson&SRSNAME=EPSG:4171"
         autopartage_filename = "autopartage.geojson"
         autopartage = get_data(autopartage_url, autopartage_filename)
-
-        autopartage.explore(color="light blue", **kwargs)
 
         # parcs relais
         parcs_relais_url = "https://download.data.grandlyon.com/wfs/rdata?SERVICE=WFS&VERSION=2.0.0&request=GetFeature&typename=tcl_sytral.tclparcrelaisst&outputFormat=application/json; subtype=geojson&SRSNAME=EPSG:4171"
@@ -257,10 +255,10 @@ def gen_maps(
             "place_handi",
             "horaires",
             "p_surv",
+            "gid",
             "geometry",
         ]
-
-        pr[pr_columns].explore(color="yellow", **kwargs)
+        pr = pr[pr_columns]
 
     # infos transports en commun
     if rhone_buses_used:
@@ -268,8 +266,6 @@ def gen_maps(
         cars_filename = "cars.geojson"
 
         cars = get_data(cars_url, cars_filename)
-
-        cars.explore(color="lime", **kwargs)
 
     if public_transports_used:
         ## Points d'arrêt
@@ -350,6 +346,14 @@ def gen_maps(
     if taxis_used:
         hex_map = compute_heat_from_points(hex_map, taxis, "taxis", coeff=1)
 
+    if rhone_buses_used:
+        hex_map = compute_heat_from_points(hex_map, cars, "cars", coeff=1)
+
+    if cars_used:
+        hex_map = compute_heat_from_points(hex_map, parkings, "parkings", coeff=1)
+        hex_map = compute_heat_from_points(hex_map, autopartage, "autopartage", coeff=1)
+        hex_map = compute_heat_from_points(hex_map, pr, "pr", coeff=1)
+
     ## add the hex_map with heat first, then the points
     hex_map.explore(
         column="heat",
@@ -369,7 +373,9 @@ def gen_maps(
         ac.explore(color="green", **kwargs)
 
     if cars_used:
-        autopartage.explore(color="grey", **kwargs)
+        parkings.explore(color="blue", **kwargs)
+        autopartage.explore(color="light blue", **kwargs)
+        pr.explore(color="yellow", **kwargs)
 
     if trains_used:
         gares[gares_columns].explore(color="gray", **kwargs)
@@ -382,6 +388,9 @@ def gen_maps(
 
     if taxis_used:
         taxis.explore(color="black", **kwargs)
+
+    if rhone_buses_used:
+        cars.explore(color="lime", **kwargs)
     # create the export path
     os.makedirs(EXPORT_PATH, exist_ok=True)
     # save the map

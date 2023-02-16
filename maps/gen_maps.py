@@ -11,6 +11,15 @@ warnings.simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
 DATA_FOLDER = "data/"
 EXPORT_PATH = "maps/templates/maps/"
 MAP_PATH = EXPORT_PATH + "full_map.html"
+COLORS = {
+    "bikes": "purple",
+    "cars": "blue",
+    "train_stations": "gray",
+    "buses": "green",
+    "public_transports": "red",
+    "taxis": "yellow",
+    "river_boats": "navy",
+}
 
 
 def download_file(url, filename):
@@ -359,33 +368,33 @@ def gen_maps(
 
     ## add the geometries from datasets used after the hexagon tiles
     if own_bike_used:
-        stationnement_velo.explore(color="green", **kwargs)
+        stationnement_velo.explore(color=COLORS.get("bikes"), **kwargs)
 
     if velov_used:
-        velov[velovdf_columns].explore(color="green", **kwargs)
+        velov[velovdf_columns].explore(color=COLORS.get("bikes"), **kwargs)
 
     # if own_bike_used or velov_used:
-    #   ac.explore(color="green", **kwargs)
+    #   ac.explore(color=COLORS.get("bikes"), **kwargs)
 
     if cars_used:
-        parkings.explore(color="blue", **kwargs)
-        autopartage.explore(color="light blue", **kwargs)
-        pr.explore(color="yellow", **kwargs)
+        parkings.explore(color=COLORS.get("cars"), **kwargs)
+        autopartage.explore(color=COLORS.get("cars"), **kwargs)
+        pr.explore(color=COLORS.get("cars"), **kwargs)
 
     if trains_used:
-        gares[gares_columns].explore(color="gray", **kwargs)
+        gares[gares_columns].explore(color=COLORS.get("train_stations"), **kwargs)
 
     if public_transports_used:
-        pa.explore(color="orange", **kwargs)
+        pa.explore(color=COLORS.get("public_transports"), **kwargs)
 
     if river_boat_used:
-        navette_fluviale.explore(color="lime", **kwargs)
+        navette_fluviale.explore(color=COLORS.get("river_boats"), **kwargs)
 
     if taxis_used:
-        taxis.explore(color="black", **kwargs)
+        taxis.explore(color=COLORS.get("taxis"), **kwargs)
 
     if rhone_buses_used:
-        cars.explore(color="lime", **kwargs)
+        cars.explore(color=COLORS.get("buses"), **kwargs)
     # create the export path
     os.makedirs(EXPORT_PATH, exist_ok=True)
     # save the map

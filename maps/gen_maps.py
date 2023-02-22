@@ -191,13 +191,18 @@ def gen_maps(
         velov_filename = "velov.geojson"
 
         velov = get_data(url_velov, velov_filename)
-
+        # remove closed stations
+        velov = velov[velov.status == "OPEN"]
         velovdf_columns = [
             "name",
             "address",
             "commune",
+            "bike_stands",
             "geometry",
+            "gid",
         ]
+
+        velov = velov[velovdf_columns]
 
     if velov_used or own_bike_used:
         # aménagements cyclables
@@ -211,7 +216,21 @@ def gen_maps(
         gares_filename = "gares.geojson"
 
         gares = get_data(gares_url, gares_filename)
-        gares_columns = ["nom", "theme", "soustheme", "geometry"]
+        gares_columns = ["nom", "geometry", "gid"]
+        gares = gares[gares_columns]
+
+        # Project to NAD83 projected crs
+        gares = gares.to_crs(epsg=2263)
+
+        # Access the centroid attribute of each polygon
+        gares["centroid"] = gares.centroid
+
+        # Project to WGS84 geographic crs
+        # geometry (active) column
+        gares = gares.to_crs(epsg=4326)
+
+        # Centroid column
+        gares["centroid"] = gares["centroid"].to_crs(epsg=4326)
 
     if cars_used:
         # infos stationnement
@@ -369,7 +388,15 @@ def gen_maps(
         stationnement_velo.explore(color=COLORS.get("bikes"), **kwargs)
 
     if velov_used:
-        velov[velovdf_columns].explore(color=COLORS.get("bikes"), **kwargs)
+        bike_marker = folium.Marker(
+            location=[25.0431, 121.539723],
+            icon=folium.Icon(color="red", icon="bicycle", prefix="fa"),
+        )
+        velov.explore(
+            # color=COLORS.get("bikes"),
+            marker_type=bike_marker,
+            **kwargs,
+        )
 
     # if own_bike_used or velov_used:
     #   ac.explore(color=COLORS.get("bikes"), **kwargs)
@@ -381,6 +408,15 @@ def gen_maps(
 
     if trains_used:
         gares[gares_columns].explore(color=COLORS.get("train_stations"), **kwargs)
+        # add the train marker to the centroid of each train station
+        for _, r in gares.iterrows():
+            lat = r["centroid"].y
+            lon = r["centroid"].x
+            folium.Marker(
+                location=[lat, lon],
+                popup=r["nom"],
+                icon=folium.Icon(color="gray", icon="train", prefix="fa"),
+            ).add_to(m)
 
     if public_transports_used:
         pa.explore(color=COLORS.get("public_transports"), **kwargs)

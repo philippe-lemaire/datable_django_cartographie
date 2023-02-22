@@ -12,14 +12,16 @@ DATA_FOLDER = "data/"
 EXPORT_PATH = "maps/templates/maps/"
 MAP_PATH = EXPORT_PATH + "full_map.html"
 COLORS = {
-    "bikes": "purple",
-    "cars": "blue",
-    "train_stations": "gray",
-    "buses": "green",
-    "public_transports": "red",
-    "taxis": "yellow",
-    "river_boats": "navy",
+    "bikes": "#904C97",
+    "cars": "#95C7CC",
+    "train_stations": "#9A9A9A",
+    "buses": "#73C6C1",
+    "public_transports": "#EB5099",
+    "taxis": "#FFC403",
+    "river_boats": "#8A77BA",
 }
+
+RESOLUTION = 9
 
 
 def download_file(url, filename):
@@ -49,24 +51,24 @@ def get_data(url, filename):
         return None
 
 
-def compute_heat_from_points(hex_map, df, colname, coeff):
+def compute_heat_from_points(hex_map, df, colname="some_name", coeff=1):
     """Computes heat based on points being contained on hexagons on the hex maps"""
     # on itere sur chaque ligne de la dataframe df, et donc sur chaque point positionné
     for index, (gid, point) in df[["gid", "geometry"]].iterrows():
         # on stocke le résultat du test "l'hexagone contient ce point" dans une colonne de la table hex_map créée à ce effet
         hex_map[f"{colname}_{gid}"] = hex_map.geometry.contains(point)
 
-    # On constitue la liste des colonnes ainsi créée
+    # On constitue la liste des colonnes ainsi créées
     column_names = [name for name in hex_map.columns if name.startswith(f"{colname}_")]
 
-    # On crée une colonne 'heat' dans hex_map avec la somme des lignes : un dénombrement des stations de vélov présentes dans le hex
+    # On incrémente une colonne 'heat' dans hex_map avec la somme des lignes : un dénombrement des points présents dans le hex
     hex_map["heat"] += hex_map[column_names].sum(axis=1) * coeff
     hex_map = hex_map[["nom", "geometry", "heat"]]
     print(f"hex_map mise à jour avec les {index} points de la dataframe")
     return hex_map
 
 
-def compute_heat_from_lines(hex_map, df, colname, coeff):
+def compute_heat_from_lines(hex_map, df, colname="some_name", coeff=1):
     """Computes heat based on lines crossing hexagons on the hex map"""
     # on itere sur chaque ligne de la dataframe df, et donc sur chaque point positionné
     for index, (gid, line) in df[["gid", "geometry"]].iterrows():
@@ -76,7 +78,7 @@ def compute_heat_from_lines(hex_map, df, colname, coeff):
     # On constitue la liste des colonnes ainsi créée
     column_names = [name for name in hex_map.columns if name.startswith(f"{colname}_")]
 
-    # On incrémente la colonne 'heat' dans hex_map avec la somme des lignes : un dénombrement des stations de vélov présentes dans le hex multiplié par le coeff
+    # On incrémente la colonne 'heat' dans hex_map avec la somme des lignes : un dénombrement des points présents dans le hex multiplié par le coeff
     hex_map["heat"] += hex_map[column_names].sum(axis=1) * coeff
     hex_map = hex_map[["nom", "geometry", "heat"]]
     print(f"hex_map mise à jour avec les {index} points de la dataframe")
@@ -118,12 +120,14 @@ def compute_heat_train_station(hex_map, df, colname="gare", coeff=5):
                         hex_map.loc[
                             hex_code, "close_to_train_station"
                         ] = True  # on le flagge comme voisin d'une gare
-                except (KeyError):
+                except (
+                    KeyError
+                ):  # exception pour les hex_code non existants (liés à la bordure de notre hex map)
                     pass
 
     # on retire les lignes avec des nans ajoutés
     hex_map = hex_map.dropna(axis=0)
-    # on calcule la heat : +coeff si has_train_station, +coeff/2 si close_to_train_station and not has_train_station
+    # on calcule la heat : +coeff si has_train_station, +coeff/2 si close_to_train_station
     hex_map["heat"] += (
         hex_map["has_train_station"] * coeff
         + hex_map["close_to_train_station"] * coeff / 2
@@ -168,8 +172,8 @@ def gen_maps(
         "m": m,
         "marker_kwds": {"radius": 3},
     }
-    # own_bike_used part
 
+    # own_bike_used part
     if own_bike_used:
         stationnement_velo_url = "https://download.data.grandlyon.com/wfs/grandlyon?SERVICE=WFS&VERSION=2.0.0&request=GetFeature&typename=pvo_patrimoine_voirie.pvostationnementvelo&outputFormat=application/json; subtype=geojson&SRSNAME=EPSG:4171"
         stationnement_velo_filename = "stationnement_velo.geojson"
@@ -180,11 +184,6 @@ def gen_maps(
         stationnement_velo = stationnement_velo[
             stationnement_velo.avancement == "Existant"
         ]
-
-        # aménagements cyclables
-        ac_url = "https://download.data.grandlyon.com/wfs/grandlyon?SERVICE=WFS&VERSION=2.0.0&request=GetFeature&typename=pvo_patrimoine_voirie.pvoamenagementcyclable&outputFormat=application/json; subtype=geojson&SRSNAME=EPSG:4171"
-        ac_filename = "amenagements_cyclables.geojson"
-        ac = get_data(ac_url, ac_filename)
 
     # Velov part
     if velov_used:
@@ -200,6 +199,7 @@ def gen_maps(
             "geometry",
         ]
 
+    if velov_used or own_bike_used:
         # aménagements cyclables
         ac_url = "https://download.data.grandlyon.com/wfs/grandlyon?SERVICE=WFS&VERSION=2.0.0&request=GetFeature&typename=pvo_patrimoine_voirie.pvoamenagementcyclable&outputFormat=application/json; subtype=geojson&SRSNAME=EPSG:4171"
         ac_filename = "amenagements_cyclables.geojson"
@@ -271,12 +271,10 @@ def gen_maps(
     if rhone_buses_used:
         cars_url = "https://download.data.grandlyon.com/wfs/rdata?SERVICE=WFS&VERSION=2.0.0&request=GetFeature&typename=cdr_cardurhone.cdrarret&outputFormat=application/json; subtype=geojson&SRSNAME=EPSG:4171"
         cars_filename = "cars.geojson"
-
         cars = get_data(cars_url, cars_filename)
 
     if public_transports_used:
         ## Points d'arrêt
-
         points_arret_url = "https://download.data.grandlyon.com/wfs/rdata?SERVICE=WFS&VERSION=2.0.0&request=GetFeature&typename=tcl_sytral.tclarret&outputFormat=application/json; subtype=geojson&SRSNAME=EPSG:4171"
         points_arret_filename = "points_arret.geojson"
         pa = get_data(points_arret_url, points_arret_filename)
@@ -316,14 +314,14 @@ def gen_maps(
     # reduce the columns
     hex_map_columns = ["nom", "geometry"]
     hex_map = hex_map[hex_map_columns]
-    hex_map["heat"] = 0
+    # create the heat column with zero values
+    hex_map["heat"] = 0.0
 
     # choice of resolution. The bigger the int, the smaller the hexagons 9 seems to
     # be a happy medium
-    resolution = 9
 
     # Resample to H3 cells
-    hex_map = hex_map.h3.polyfill_resample(resolution)
+    hex_map = hex_map.h3.polyfill_resample(RESOLUTION)
 
     # compute heat
     if own_bike_used:

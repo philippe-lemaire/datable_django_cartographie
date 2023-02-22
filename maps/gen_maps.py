@@ -404,13 +404,13 @@ def gen_maps(
     )
 
     ## add the geometries from datasets used after the hexagon tiles
+    # It's a bit too taxing to draw markers for each stationnement vélo
+    """
     if own_bike_used:
-        own_bike_marker = folium.Marker(
-            icon=folium.Icon(color="darkpurple", icon="lock-keyhole", prefix="fa"),
-        )
-
-        stationnement_velo.explore(marker_type=own_bike_marker, **kwargs)
-
+        # own_bike_marker = folium.Marker(icon=folium.Icon(color="darkpurple", icon="lock-keyhole", prefix="fa"), )
+        # own_bike_marker = None
+        stationnement_velo.explore(color="gray", marker_type=own_bike_marker, **kwargs)
+    """
     if velov_used:
         velov_marker = folium.Marker(
             icon=folium.Icon(color="red", icon="bicycle", prefix="fa"),
@@ -454,7 +454,12 @@ def gen_maps(
         pa.explore(color=COLORS.get("public_transports"), **kwargs)
 
     if river_boat_used:
-        navette_fluviale.explore(color=COLORS.get("river_boats"), **kwargs)
+        ferry_marker = folium.Marker(
+            icon=folium.Icon(color="darkblue", icon="ferry", prefix="fa"),
+        )
+        navette_fluviale.explore(
+            color=COLORS.get("river_boats"), marker_type=ferry_marker, **kwargs
+        )
 
     if taxis_used:
         taxis.explore(color=COLORS.get("taxis"), **kwargs)

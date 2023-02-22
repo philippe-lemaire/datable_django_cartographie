@@ -12,14 +12,34 @@ DATA_FOLDER = "data/"
 EXPORT_PATH = "maps/templates/maps/"
 MAP_PATH = EXPORT_PATH + "full_map.html"
 COLORS = {
-    "bikes": "#904C97",
-    "cars": "#95C7CC",
     "train_stations": "#9A9A9A",
     "buses": "#73C6C1",
     "public_transports": "#EB5099",
     "taxis": "#FFC403",
     "river_boats": "#8A77BA",
 }
+
+MARKER_COLORS = [
+    "red",
+    "blue",
+    "green",
+    "purple",
+    "orange",
+    "darkred",
+    "lightred",
+    "beige",
+    "darkblue",
+    "darkgreen",
+    "cadetblue",
+    "darkpurple",
+    "white",
+    "pink",
+    "lightblue",
+    "lightgreen",
+    "gray",
+    "black",
+    "lightgray",
+]
 
 RESOLUTION = 9
 
@@ -116,7 +136,7 @@ def compute_heat_train_station(hex_map, df, colname="gare", coeff=5):
                 try:
                     if not hex_map.loc[
                         hex_code, "has_train_station"
-                    ]:  # s'il n’y a pas déjà une gare dessus
+                    ]:  # s'il n"y a pas déjà une gare dessus
                         hex_map.loc[
                             hex_code, "close_to_train_station"
                         ] = True  # on le flagge comme voisin d'une gare
@@ -385,16 +405,19 @@ def gen_maps(
 
     ## add the geometries from datasets used after the hexagon tiles
     if own_bike_used:
-        stationnement_velo.explore(color=COLORS.get("bikes"), **kwargs)
+        own_bike_marker = folium.Marker(
+            icon=folium.Icon(color="darkpurple", icon="lock-keyhole", prefix="fa"),
+        )
+
+        stationnement_velo.explore(marker_type=own_bike_marker, **kwargs)
 
     if velov_used:
-        bike_marker = folium.Marker(
-            location=[25.0431, 121.539723],
+        velov_marker = folium.Marker(
             icon=folium.Icon(color="red", icon="bicycle", prefix="fa"),
         )
         velov.explore(
             # color=COLORS.get("bikes"),
-            marker_type=bike_marker,
+            marker_type=velov_marker,
             **kwargs,
         )
 
@@ -402,9 +425,18 @@ def gen_maps(
     #   ac.explore(color=COLORS.get("bikes"), **kwargs)
 
     if cars_used:
-        parkings.explore(color=COLORS.get("cars"), **kwargs)
-        autopartage.explore(color=COLORS.get("cars"), **kwargs)
-        pr.explore(color=COLORS.get("cars"), **kwargs)
+        parking_marker = folium.Marker(
+            icon=folium.Icon(color="cadetblue", icon="square-parking", prefix="fa"),
+        )
+        pr_marker = folium.Marker(
+            icon=folium.Icon(color="lightred", icon="square-parking", prefix="fa"),
+        )
+        autopartage_marker = folium.Marker(
+            icon=folium.Icon(color="lightblue", icon="square-parking", prefix="fa"),
+        )
+        parkings.explore(marker_type=parking_marker, **kwargs)
+        autopartage.explore(marker_type=autopartage_marker, **kwargs)
+        pr.explore(marker_type=pr_marker, **kwargs)
 
     if trains_used:
         gares[gares_columns].explore(color=COLORS.get("train_stations"), **kwargs)

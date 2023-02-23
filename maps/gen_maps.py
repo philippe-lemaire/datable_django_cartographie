@@ -511,7 +511,10 @@ def gen_maps(
         )
 
     if taxis_used:
-        taxis.explore(color=COLORS.get("taxis"), **kwargs)
+        taxi_marker = folium.Marker(
+            icon=folium.Icon(color="lightgray", icon="taxi", prefix="fa"),
+        )
+        taxis.explore(marker_type=taxi_marker, **kwargs)
 
     if rhone_buses_used:
         cars.explore(color=COLORS.get("buses"), **kwargs)

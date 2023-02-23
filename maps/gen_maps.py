@@ -1,5 +1,6 @@
 import requests
 import pandas as pd
+import numpy as np
 import geopandas as gpd
 import folium
 import os
@@ -105,21 +106,32 @@ def compute_heat_from_lines(hex_map, df, colname="some_name", coeff=1):
     return hex_map
 
 
-def compute_heat_train_station(hex_map, df, colname="gare", coeff=5):
+def compute_heat_train_station(hex_map, df, colname="gare", coeff=3):
     """#compute_heat_train_station : avoir un moyen que les gares rayonnent leur chaleur sur les hexagones qui les contiennent et les adjacents"""
 
-    for index, (gid, polygon) in df[["gid", "geometry"]].iterrows():
-        # on stocke le résultat du test "l'hexagone contient cette gare" ou bien la gare et l'hexagone overlappent dans une colonne de la table hex_map créée à ce effet
-        hex_map[f"{colname}_contains_{gid}"] = hex_map.geometry.contains(polygon)
-        hex_map[f"{colname}_overlaps_{gid}"] = hex_map.geometry.overlaps(polygon)
+    if "voyageurs" in df.columns:
+        for index, (gid, trafic, polygon) in df[
+            ["gid", "voyageurs", "geometry"]
+        ].iterrows():
+            print(trafic)
+            # on stocke le résultat du test "l'hexagone contient cette gare" ou bien la gare et l'hexagone overlappent dans une colonne de la table hex_map créée à ce effet
+            hex_map[f"{colname}_contains_{gid}"] = (
+                hex_map.geometry.contains(polygon) * trafic
+            )
+            hex_map[f"{colname}_overlaps_{gid}"] = (
+                hex_map.geometry.overlaps(polygon) * trafic
+            )
+    else:
+        for index, (gid, polygon) in df[["gid", "geometry"]].iterrows():
+            # on stocke le résultat du test "l'hexagone contient cette gare" ou bien la gare et l'hexagone overlappent dans une colonne de la table hex_map créée à ce effet
+            hex_map[f"{colname}_contains_{gid}"] = hex_map.geometry.contains(polygon)
+            hex_map[f"{colname}_overlaps_{gid}"] = hex_map.geometry.overlaps(polygon)
 
-        # On constitue la liste des colonnes ainsi créées
-        column_names = [
-            name for name in hex_map.columns if name.startswith(f"{colname}_")
-        ]
+    # On constitue la liste des colonnes ainsi créées
+    column_names = [name for name in hex_map.columns if name.startswith(f"{colname}_")]
 
-        # On crée une colonne "has_trainstation" dans hex_map
-        hex_map["has_train_station"] = hex_map[column_names].sum(axis=1) >= 1
+    # On crée une colonne "has_trainstation" dans hex_map
+    hex_map["has_train_station"] = hex_map[column_names].sum(axis=1)
 
     # on ajoute une colonne : 'close_to_train_station'
     hex_map["close_to_train_station"] = False
@@ -139,7 +151,9 @@ def compute_heat_train_station(hex_map, df, colname="gare", coeff=5):
                     ]:  # s'il n"y a pas déjà une gare dessus
                         hex_map.loc[
                             hex_code, "close_to_train_station"
-                        ] = True  # on le flagge comme voisin d'une gare
+                        ] = (
+                            row.has_train_station
+                        )  # on le flagge comme voisin d'une gare
                 except (
                     KeyError
                 ):  # exception pour les hex_code non existants (liés à la bordure de notre hex map)
@@ -236,9 +250,42 @@ def gen_maps(
         gares_filename = "gares.geojson"
 
         gares = get_data(gares_url, gares_filename)
-        gares_columns = ["nom", "geometry", "gid"]
+        gares_columns = ["nom", "geometry", "idexterne", "gid"]
+
+        print(gares.columns)
         gares = gares[gares_columns]
 
+        # turn idexterne to int for future merge with traffic data
+        gares.idexterne = pd.to_numeric(gares.idexterne)
+
+        # remove the one line with no idxexterne info
+        gares = gares[~gares.idexterne.isna()]
+
+        # collect traffic data to give weight to bigger train stations
+        trafic_voyageurs_url = "https://data.sncf.com/api/explore/v2.1/catalog/datasets/frequentation-gares/exports/csv?lang=fr&timezone=Europe%2FBerlin&use_labels=true&delimiter=%3B"
+        trafic_voyageurs_filename = "trafic_voyageurs_gares.csv"
+
+        trafic = get_data(trafic_voyageurs_url, trafic_voyageurs_filename)
+
+        gares_trafic = pd.merge(
+            left=gares,
+            right=trafic,
+            left_on="idexterne",
+            right_on="Code UIC",
+            how="left",
+        )
+        gares_trafic_columns = [
+            "nom",
+            "gid",
+            "geometry",
+            "Total Voyageurs 2021",
+        ]
+
+        gares = gares_trafic[gares_trafic_columns].rename(
+            columns={"Total Voyageurs 2021": "voyageurs"}
+        )
+        # normalize the traffic data to get some reasonnable numbers
+        gares.voyageurs = 100 * gares.voyageurs / np.linalg.norm(gares.voyageurs)
         # Project to NAD83 projected crs
         gares = gares.to_crs(epsg=2263)
 
@@ -251,6 +298,8 @@ def gen_maps(
 
         # Centroid column
         gares["centroid"] = gares["centroid"].to_crs(epsg=4326)
+
+        print(gares.columns)
 
     if cars_used:
         # infos stationnement
@@ -439,7 +488,7 @@ def gen_maps(
         pr.explore(marker_type=pr_marker, **kwargs)
 
     if trains_used:
-        gares[gares_columns].explore(color=COLORS.get("train_stations"), **kwargs)
+        gares.explore(color=COLORS.get("train_stations"), **kwargs)
         # add the train marker to the centroid of each train station
         for _, r in gares.iterrows():
             lat = r["centroid"].y

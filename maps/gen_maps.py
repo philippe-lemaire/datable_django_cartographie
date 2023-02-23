@@ -113,7 +113,6 @@ def compute_heat_train_station(hex_map, df, colname="gare", coeff=3):
         for index, (gid, trafic, polygon) in df[
             ["gid", "voyageurs", "geometry"]
         ].iterrows():
-            print(trafic)
             # on stocke le résultat du test "l'hexagone contient cette gare" ou bien la gare et l'hexagone overlappent dans une colonne de la table hex_map créée à ce effet
             hex_map[f"{colname}_contains_{gid}"] = (
                 hex_map.geometry.contains(polygon) * trafic
@@ -449,6 +448,7 @@ def gen_maps(
         column="heat",
         cmap="plasma",
         style_kwds={"opacity": 0.05},
+        legend=None,
         **kwargs,
     )
 

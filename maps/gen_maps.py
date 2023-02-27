@@ -185,6 +185,7 @@ def gen_maps(
     public_transports_used=False,
     taxis_used=False,
     river_boat_used=False,
+    pmr_used=False,
 ):
     # map preparation
 
@@ -392,6 +393,29 @@ def gen_maps(
         navette_fluviale_columns = ["nom", "gid", "geometry"]
         navette_fluviale = navette_fluviale[navette_fluviale_columns]
 
+    if pmr_used:
+        pmr_url = "https://download.data.grandlyon.com/ws/grandlyon/com_donnees_communales.comstationnementpmr_1_0_0/all.csv?maxfeatures=-1"
+        pmr_filename = "pmr.csv"
+
+        pmr = get_data(pmr_url, pmr_filename)
+
+        num_fixer = lambda s: float(s.replace(",", "."))
+
+        pmr.lat = pmr.lat.apply(num_fixer)
+        pmr.lon = pmr.lon.apply(num_fixer)
+
+        pmr = gpd.GeoDataFrame(pmr, geometry=gpd.points_from_xy(pmr.lon, pmr.lat))
+        pmr_columns = [
+            "nom",
+            "adresse",
+            "codepost",
+            "commune",
+            "nb_places",
+            "gid",
+            "geometry",
+        ]
+        pmr = pmr[pmr_columns]
+
     ## HEX GRID Part
     # get the communes shapes and resample them as hexagons
     communes_url = "https://download.data.grandlyon.com/wfs/grandlyon?SERVICE=WFS&VERSION=2.0.0&request=GetFeature&typename=adr_voie_lieu.adrcomgl&outputFormat=application/json; subtype=geojson&SRSNAME=EPSG:4171"
@@ -442,6 +466,9 @@ def gen_maps(
         hex_map = compute_heat_from_points(hex_map, parkings, "parkings", coeff=1)
         hex_map = compute_heat_from_points(hex_map, autopartage, "autopartage", coeff=1)
         hex_map = compute_heat_from_points(hex_map, pr, "pr", coeff=1)
+
+    if pmr_used:
+        hex_map = compute_heat_from_points(hex_map, pmr, "pmr", coeff=1)
 
     ## add the hex_map with heat first, then the points
     hex_map.explore(
@@ -518,6 +545,11 @@ def gen_maps(
 
     if rhone_buses_used:
         cars.explore(color=COLORS.get("buses"), **kwargs)
+    if pmr_used:
+        pmr_marker = folium.Marker(
+            icon=folium.Icon(color="darkblue", icon="wheelchair", prefix="fa"),
+        )
+        pmr.explore(marker_type=pmr_marker, **kwargs)
     # create the export path
     os.makedirs(EXPORT_PATH, exist_ok=True)
     # save the map

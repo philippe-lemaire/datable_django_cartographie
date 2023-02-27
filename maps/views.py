@@ -26,6 +26,7 @@ def display_map(request):
             public_transports_used = form.cleaned_data["public_transports_used"]
             taxis_used = form.cleaned_data["taxis_used"]
             river_boat_used = form.cleaned_data["river_boat_used"]
+            pmr_used = form.cleaned_data["pmr_used"]
 
             m = gen_maps(
                 own_bike_used=own_bike_used,
@@ -36,6 +37,7 @@ def display_map(request):
                 public_transports_used=public_transports_used,
                 taxis_used=taxis_used,
                 river_boat_used=river_boat_used,
+                pmr_used=pmr_used,
             )
 
             # return render(request, "maps/display_map.html", context={'map': m._repr_html_()})

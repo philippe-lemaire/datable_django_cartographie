@@ -71,3 +71,4 @@ notebooks/
 */full_map.html
 maps/templates/maps/full_map.html
 data/trafic_voyageurs_gares.csv
+*.csv

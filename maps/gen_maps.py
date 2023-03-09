@@ -310,19 +310,19 @@ def gen_maps(
         parkings_columns = [
             "nom",
             "commune",
-            "voieentree",
-            "voiesortie",
+            # "voieentree",
+            # "voiesortie",
             # 'avancement',
             # 'annee',
-            "typeparking",
-            "situation",
+            # "typeparking",
+            # "situation",
             #'parkingtempsreel',
             #  'gabarit',
-            "capacite",
+            # "capacite",
             #'capacite2rm',
-            "capacitevelo",
-            "capaciteautopartage",
-            "capacitepmr",
+            # "capacitevelo",
+            # "capaciteautopartage",
+            # "capacitepmr",
             #'usage',
             #'vocation',
             "reglementation",
@@ -339,6 +339,24 @@ def gen_maps(
         autopartage_filename = "autopartage.geojson"
         autopartage = get_data(autopartage_url, autopartage_filename)
 
+        autopartage_columns = [
+            "nom",
+            # "identifiantstation",
+            "adresse",
+            "commune",
+            # "insee",
+            "typeautopartage",
+            # "nbemplacements",
+            # "localisation",
+            # "anneerealisation",
+            # "estouverte",
+            # "observation",
+            "gid",
+            "geometry",
+        ]
+
+        autopartage = autopartage[autopartage_columns]
+
         # parcs relais
         parcs_relais_url = "https://download.data.grandlyon.com/wfs/rdata?SERVICE=WFS&VERSION=2.0.0&request=GetFeature&typename=tcl_sytral.tclparcrelaisst&outputFormat=application/json; subtype=geojson&SRSNAME=EPSG:4171"
         parcs_relais_filename = "parcs_relais.geojson"
@@ -347,9 +365,9 @@ def gen_maps(
         pr_columns = [
             "nom",
             "capacite",
-            "place_handi",
-            "horaires",
-            "p_surv",
+            # "place_handi",
+            # "horaires",
+            # "p_surv",
             "gid",
             "geometry",
         ]
@@ -369,9 +387,6 @@ def gen_maps(
         pa_columns = [
             "nom",
             "desserte",
-            "pmr",
-            "ascenseur",
-            "escalator",
             "gid",
             "geometry",
         ]
@@ -407,10 +422,10 @@ def gen_maps(
         pmr = gpd.GeoDataFrame(pmr, geometry=gpd.points_from_xy(pmr.lon, pmr.lat))
         pmr_columns = [
             "nom",
-            "adresse",
-            "codepost",
+            # "adresse",
+            # "codepost",
             "commune",
-            "nb_places",
+            # "nb_places",
             "gid",
             "geometry",
         ]
@@ -491,7 +506,7 @@ def gen_maps(
         velov_marker = folium.Marker(
             icon=folium.Icon(color="red", icon="bicycle", prefix="fa"),
         )
-        velov.explore(
+        velov.drop(columns="gid").explore(
             # color=COLORS.get("bikes"),
             marker_type=velov_marker,
             **kwargs,
@@ -510,9 +525,11 @@ def gen_maps(
         autopartage_marker = folium.Marker(
             icon=folium.Icon(color="lightblue", icon="square-parking", prefix="fa"),
         )
-        parkings.explore(marker_type=parking_marker, **kwargs)
-        autopartage.explore(marker_type=autopartage_marker, **kwargs)
-        pr.explore(marker_type=pr_marker, **kwargs)
+        parkings.drop(columns="gid").explore(marker_type=parking_marker, **kwargs)
+        autopartage.drop(columns="gid").explore(
+            marker_type=autopartage_marker, **kwargs
+        )
+        pr.drop(columns="gid").explore(marker_type=pr_marker, **kwargs)
 
     if trains_used:
         gares.explore(color=COLORS.get("train_stations"), **kwargs)
@@ -527,13 +544,13 @@ def gen_maps(
             ).add_to(m)
 
     if public_transports_used:
-        pa.explore(color=COLORS.get("public_transports"), **kwargs)
+        pa.drop(columns="gid").explore(color=COLORS.get("public_transports"), **kwargs)
 
     if river_boat_used:
         ferry_marker = folium.Marker(
             icon=folium.Icon(color="darkblue", icon="ferry", prefix="fa"),
         )
-        navette_fluviale.explore(
+        navette_fluviale.drop(columns="gid").explore(
             color=COLORS.get("river_boats"), marker_type=ferry_marker, **kwargs
         )
 
@@ -541,15 +558,17 @@ def gen_maps(
         taxi_marker = folium.Marker(
             icon=folium.Icon(color="lightgray", icon="taxi", prefix="fa"),
         )
-        taxis.explore(marker_type=taxi_marker, **kwargs)
+        taxis.drop(columns="gid").explore(marker_type=taxi_marker, **kwargs)
 
     if rhone_buses_used:
-        cars.explore(color=COLORS.get("buses"), **kwargs)
+        cars.drop(columns=["gid", "stop_id"]).explore(
+            color=COLORS.get("buses"), **kwargs
+        )
     if pmr_used:
         pmr_marker = folium.Marker(
             icon=folium.Icon(color="darkblue", icon="wheelchair", prefix="fa"),
         )
-        pmr.explore(marker_type=pmr_marker, **kwargs)
+        pmr.drop(columns="gid").explore(marker_type=pmr_marker, **kwargs)
     # create the export path
     os.makedirs(EXPORT_PATH, exist_ok=True)
     # save the map

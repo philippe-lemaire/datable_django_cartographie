@@ -1,8 +1,32 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block content %}
 
-<h1>Hello, this is the index</h1>
+<h1 class="mb-2">Cartographie de l'offre de mobilité de la Métropole de Lyon</h1>
 
-<h2><a href="{% url 'maps:display_map' %}">Afficher la carte</a></h2>
+
+<p>Cette application web vous permet de déterminer les zones de la Métropole offrant le plus d’options de mobilité,
+    selon vos préférences.</p>
+
+<h2 class="mt-2 mb-2">1. Sélection des modalités </h2>
+<p>La première étape consiste à cocher dans un formulaire les différents modes de déplacement qui vous intéressent.</p>
+
+<img class="img-thumbnail" alt="capture d'écran du formulaire" src="{% static 'maps/form.png' %}" />
+
+
+
+<h2 class="mt-2 mb-2">2. Cartographie et interprétation de la carte</h2>
+
+<ol>
+    <li>Les données géolocalisant les différentes options choisies sont ensuite téléchargées et projetées sur une carte.
+    </li>
+    <li>La carte est subdivisée en hexagones de quelques centaines de mètres de diagonale.</li>
+    <li>Un score de chaleur est attribué à chaque hexagone selon les offres de mobilité qu’il contient.</li>
+    <li>La carte vous est affichée, la couleur de chaque hexagone correspond à son score de chaleur.</li>
+</ol>
+
+<img class="img-thumbnail" alt="carte de chaleur" src="{% static 'maps/hex_map.png' %}" />
+
+<a href="{% url 'maps:display_map' %}" class="btn btn-primary mt-3 mb-3">Je compose ma carte</a>
 {% endblock %}

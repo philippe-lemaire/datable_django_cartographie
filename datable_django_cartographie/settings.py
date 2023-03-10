@@ -10,6 +10,9 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 import os
+import os
+from urllib.parse import urlparse
+
 import environ
 
 from pathlib import Path
@@ -26,9 +29,17 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 environment = os.getenv("ENVIRONMENT")
-DEBUG = environment != "production"
 
-ALLOWED_HOSTS = []
+# Default false. True allows default landing pages to be visible
+DEBUG = env("DEBUG", default=False)
+
+# If defined, add service URL to Django security settings
+CLOUDRUN_SERVICE_URL = env("CLOUDRUN_SERVICE_URL", default=None)
+if CLOUDRUN_SERVICE_URL:
+    ALLOWED_HOSTS = [urlparse(CLOUDRUN_SERVICE_URL).netloc]
+    CSRF_TRUSTED_ORIGINS = [CLOUDRUN_SERVICE_URL]
+else:
+    ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -130,8 +141,17 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# whitenoise
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # for crispy forms
 CRISPY_TEMPLATE_PACK = "bootstrap4"
+
+
+# Define static storage via django-storages[google]
+GS_BUCKET_NAME = env("GS_BUCKET_NAME")
+STATICFILES_DIRS = []
+DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
+STATICFILES_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
+GS_DEFAULT_ACL = "publicRead"
+
+# whitenoise
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"

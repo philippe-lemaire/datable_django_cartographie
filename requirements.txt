@@ -4,8 +4,8 @@ django-environ
 whitenoise
 django-crispy-forms
 folium
-matplotlib
-mapclassify
+#matplotlib
+#mapclassify
 geopandas
 h3pandas
 requests

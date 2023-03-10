@@ -9,3 +9,6 @@ folium
 geopandas
 h3pandas
 requests
+gunicorn==20.1.0
+#psycopg2-binary==2.9.5
+django-storages[google]==1.12.3

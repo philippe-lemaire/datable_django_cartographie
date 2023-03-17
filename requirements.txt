@@ -5,6 +5,8 @@ whitenoise
 django-crispy-forms
 crispy-bootstrap4
 folium
+matplotlib
+mapclassify
 geopandas
 h3pandas
 requests

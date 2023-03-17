@@ -35,7 +35,7 @@ DEBUG = environment == "development"
 
 # If defined, add service URL to Django security settings
 
-ALLOWED_HOSTS = ["0.0.0.0", "localhost", "databletuba.pythonanywhere.com"]
+ALLOWED_HOSTS = ["0.0.0.0", "127.0.0.1", "localhost", "databletuba.pythonanywhere.com"]
 
 
 # Application definition
@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "crispy_forms",
+    "crispy_bootstrap4",
     "maps",
 ]
 

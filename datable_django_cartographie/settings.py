@@ -31,15 +31,11 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 environment = os.getenv("ENVIRONMENT")
 
 # Default false. True allows default landing pages to be visible
-DEBUG = env("DEBUG", default=False)
+DEBUG = environment == "development"
 
 # If defined, add service URL to Django security settings
-CLOUDRUN_SERVICE_URL = env("CLOUDRUN_SERVICE_URL", default=None)
-if CLOUDRUN_SERVICE_URL:
-    ALLOWED_HOSTS = [urlparse(CLOUDRUN_SERVICE_URL).netloc]
-    CSRF_TRUSTED_ORIGINS = [CLOUDRUN_SERVICE_URL]
-else:
-    ALLOWED_HOSTS = ["*"]
+
+ALLOWED_HOSTS = ["0.0.0.0", "localhost", "databletuba.pythonanywhere.com"]
 
 
 # Application definition
@@ -121,13 +117,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/4.1/topics/i18n/
 
 LANGUAGE_CODE = "fr-fr"
-
 TIME_ZONE = "Europe/Paris"
-
 USE_I18N = True
-
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
@@ -141,17 +133,8 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-
 # for crispy forms
 CRISPY_TEMPLATE_PACK = "bootstrap4"
-
-
-# Define static storage via django-storages[google]
-GS_BUCKET_NAME = env("GS_BUCKET_NAME")
-STATICFILES_DIRS = []
-DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
-STATICFILES_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
-GS_DEFAULT_ACL = "publicRead"
 
 # whitenoise
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"

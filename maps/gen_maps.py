@@ -72,41 +72,7 @@ def get_data(url, filename):
         return None
 
 
-def compute_heat_from_points(hex_map, df, name="some_name", coeff=1):
-    """Computes heat based on points being contained on hexagons on the hex maps"""
-    colname = name
-
-    # check if data already there
-    heat_csv_name = f"{name}_heat.csv"
-    heat_csv_path = f"data/{heat_csv_name}"
-    if heat_csv_name in os.listdir("data/"):
-        # load the data and return the hex map
-        print("loading heat column from cache")
-        heat = pd.read_csv(heat_csv_path)
-        hex_map["loaded_heat"] = heat.heat.to_list()
-        hex_map.heat += hex_map.loaded_heat
-        return hex_map.drop(columns="loaded_heat")
-    # on itere sur chaque ligne de la dataframe df, et donc sur chaque point positionné
-    for index, (gid, point) in df[["gid", "geometry"]].iterrows():
-        # on stocke le résultat du test "l'hexagone contient ce point" dans une colonne de la table hex_map créée à ce effet
-        hex_map[f"{colname}_{gid}"] = hex_map.geometry.contains(point)
-
-    # On constitue la liste des colonnes ainsi créées
-    column_names = [name for name in hex_map.columns if name.startswith(f"{colname}_")]
-
-    # On incrémente une colonne 'heat' dans hex_map avec la somme des lignes : un dénombrement des points présents dans le hex
-    hex_map["heat"] += hex_map[column_names].sum(axis=1) * coeff
-    hex_map = hex_map[["nom", "geometry", "heat"]]
-    print(f"hex_map mise à jour avec les {index} points de la dataframe")
-    # on sauvegarde la colonne heat dans un csv pour usage futur
-    if heat_csv_name not in os.listdir("data/"):
-        print("heat column saved for later use")
-        hex_map[["heat"]].to_csv(heat_csv_path)
-    return hex_map
-
-
-def compute_heat_from_lines(hex_map, df, name="some_name", coeff=1):
-    """Computes heat based on lines crossing hexagons on the hex map"""
+def compute_heat_from_points(hex_map, df, name, coeff=1):
     colname = name
 
     # TODO check if data already there
@@ -116,9 +82,50 @@ def compute_heat_from_lines(hex_map, df, name="some_name", coeff=1):
         # load the data and return the hex map
         print("loading heat column from cache")
         heat = pd.read_csv(heat_csv_path)
-        hex_map["loaded_heat"] = heat.heat.to_list()
+        hex_map = pd.merge(left=hex_map.reset_index(), right=heat)
+
         hex_map.heat += hex_map.loaded_heat
-        return hex_map.drop(columns="loaded_heat")
+
+        return hex_map.set_index("h3_polyfill").drop(columns="loaded_heat")
+
+    # on itere sur chaque ligne de la dataframe df, et donc sur chaque point positionné
+    for index, (gid, line) in df[["gid", "geometry"]].iterrows():
+        # on stocke le résultat du test "l'hexagone contient ce point" dans une colonne de la table hex_map créée à ce effet
+        hex_map[f"{colname}_{gid}"] = hex_map.geometry.contains(line)
+
+    # On constitue la liste des colonnes ainsi créée
+    column_names = [name for name in hex_map.columns if name.startswith(f"{colname}_")]
+
+    # On incrémente la colonne 'heat' dans hex_map avec la somme des lignes : un dénombrement des stations de vélov présentes dans le hex multiplié par le coeff
+    new_heat = hex_map[column_names].sum(axis=1) * coeff
+    hex_map["heat"] += new_heat
+
+    hex_map = hex_map[["nom", "geometry", "heat"]]
+    print(f"hex_map mise à jour avec les {index} points de la dataframe")
+    # on sauvegarde la colonne heat dans un csv pour usage futur
+    if heat_csv_name not in os.listdir("data/"):
+        print("heat column saved for later use")
+        new_heat = pd.DataFrame(new_heat, columns=["loaded_heat"])
+        new_heat.to_csv(heat_csv_path)
+    return hex_map
+
+
+def compute_heat_from_lines(hex_map, df, name, coeff=1):
+    colname = name
+
+    # TODO check if data already there
+    heat_csv_name = f"{name}_heat.csv"
+    heat_csv_path = f"data/{heat_csv_name}"
+    if heat_csv_name in os.listdir("data/"):
+        # load the data and return the hex map
+        print("loading heat column from cache")
+        heat = pd.read_csv(heat_csv_path)
+        hex_map = pd.merge(left=hex_map.reset_index(), right=heat)
+
+        hex_map.heat += hex_map.loaded_heat
+
+        return hex_map.set_index("h3_polyfill").drop(columns="loaded_heat")
+
     # on itere sur chaque ligne de la dataframe df, et donc sur chaque point positionné
     for index, (gid, line) in df[["gid", "geometry"]].iterrows():
         # on stocke le résultat du test "l'hexagone contient ce point" dans une colonne de la table hex_map créée à ce effet
@@ -127,14 +134,17 @@ def compute_heat_from_lines(hex_map, df, name="some_name", coeff=1):
     # On constitue la liste des colonnes ainsi créée
     column_names = [name for name in hex_map.columns if name.startswith(f"{colname}_")]
 
-    # On incrémente la colonne 'heat' dans hex_map avec la somme des lignes : un dénombrement des points présents dans le hex multiplié par le coeff
-    hex_map["heat"] += hex_map[column_names].sum(axis=1) * coeff
+    # On incrémente la colonne 'heat' dans hex_map avec la somme des lignes : un dénombrement des stations de vélov présentes dans le hex multiplié par le coeff
+    new_heat = hex_map[column_names].sum(axis=1) * coeff
+    hex_map["heat"] += new_heat
+
     hex_map = hex_map[["nom", "geometry", "heat"]]
     print(f"hex_map mise à jour avec les {index} points de la dataframe")
     # on sauvegarde la colonne heat dans un csv pour usage futur
     if heat_csv_name not in os.listdir("data/"):
         print("heat column saved for later use")
-        hex_map[["heat"]].to_csv(heat_csv_path)
+        new_heat = pd.DataFrame(new_heat, columns=["loaded_heat"])
+        new_heat.to_csv(heat_csv_path)
     return hex_map
 
 
@@ -149,9 +159,11 @@ def compute_heat_train_station(hex_map, df, name="gare", coeff=3):
         # load the data and return the hex map
         print("loading heat column from cache")
         heat = pd.read_csv(heat_csv_path)
-        hex_map["loaded_heat"] = heat.heat.to_list()
+        hex_map = pd.merge(left=hex_map.reset_index(), right=heat)
+
         hex_map.heat += hex_map.loaded_heat
-        return hex_map.drop(columns="loaded_heat")
+
+        return hex_map.set_index("h3_polyfill").drop(columns="loaded_heat")
 
     if "voyageurs" in df.columns:
         for index, (gid, trafic, polygon) in df[
@@ -205,10 +217,12 @@ def compute_heat_train_station(hex_map, df, name="gare", coeff=3):
     # on retire les lignes avec des nans ajoutés
     hex_map = hex_map.dropna(axis=0)
     # on calcule la heat : +coeff si has_train_station, +coeff/2 si close_to_train_station
-    hex_map["heat"] += (
+    new_heat = (
         hex_map["has_train_station"] * coeff
         + hex_map["close_to_train_station"] * coeff / 2
     )
+
+    hex_map["heat"] += new_heat
 
     # on limite hex_map aux colonnes qui nous intéressent
     hex_map_columns = [
@@ -220,7 +234,26 @@ def compute_heat_train_station(hex_map, df, name="gare", coeff=3):
     # on sauvegarde la colonne heat dans un csv pour usage futur
     if heat_csv_name not in os.listdir("data/"):
         print("heat column saved for later use")
-        hex_map[["heat"]].to_csv(heat_csv_path)
+        new_heat = pd.DataFrame(new_heat, columns=["loaded_heat"])
+        new_heat.to_csv(heat_csv_path)
+    return hex_map
+
+
+def create_hex_map(resolution=RESOLUTION):
+    url_communes = "https://download.data.grandlyon.com/wfs/grandlyon?SERVICE=WFS&VERSION=2.0.0&request=GetFeature&typename=adr_voie_lieu.adrcomgl&outputFormat=application/json; subtype=geojson&SRSNAME=EPSG:4171"
+    communes_filename = "communes.geojson"
+
+    communes = get_data(url_communes, communes_filename)
+
+    communes_columns = ["nom", "nomreduit", "insee", "trigramme", "geometry"]
+    communes = communes[communes_columns]
+
+    # Resample to H3 cells
+    hex_map = communes.h3.polyfill_resample(resolution)
+
+    hex_map = hex_map[["nom", "geometry"]]
+
+    hex_map["heat"] = 0
     return hex_map
 
 
@@ -480,22 +513,9 @@ def gen_maps(
         pmr = pmr[pmr_columns]
 
     ## HEX GRID Part
-    # get the communes shapes and resample them as hexagons
-    communes_url = "https://download.data.grandlyon.com/wfs/grandlyon?SERVICE=WFS&VERSION=2.0.0&request=GetFeature&typename=adr_voie_lieu.adrcomgl&outputFormat=application/json; subtype=geojson&SRSNAME=EPSG:4171"
-    communes_filename = "communes.geojson"
-    hex_map = get_data(communes_url, communes_filename)
-
-    # reduce the columns
-    hex_map_columns = ["nom", "geometry"]
-    hex_map = hex_map[hex_map_columns]
     # create the heat column with zero values
-    hex_map["heat"] = 0.0
 
-    # choice of resolution. The bigger the int, the smaller the hexagons 9 seems to
-    # be a happy medium
-
-    # Resample to H3 cells
-    hex_map = hex_map.h3.polyfill_resample(RESOLUTION)
+    hex_map = create_hex_map()
 
     # compute heat
     if own_bike_used:

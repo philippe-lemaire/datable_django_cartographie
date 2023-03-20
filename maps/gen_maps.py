@@ -72,8 +72,20 @@ def get_data(url, filename):
         return None
 
 
-def compute_heat_from_points(hex_map, df, colname="some_name", coeff=1):
+def compute_heat_from_points(hex_map, df, name="some_name", coeff=1):
     """Computes heat based on points being contained on hexagons on the hex maps"""
+    colname = name
+
+    # check if data already there
+    heat_csv_name = f"{name}_heat.csv"
+    heat_csv_path = f"data/{heat_csv_name}"
+    if heat_csv_name in os.listdir("data/"):
+        # load the data and return the hex map
+        print("loading heat column from cache")
+        heat = pd.read_csv(heat_csv_path)
+        hex_map["loaded_heat"] = heat.heat.to_list()
+        hex_map.heat += hex_map.loaded_heat
+        return hex_map.drop(columns="loaded_heat")
     # on itere sur chaque ligne de la dataframe df, et donc sur chaque point positionné
     for index, (gid, point) in df[["gid", "geometry"]].iterrows():
         # on stocke le résultat du test "l'hexagone contient ce point" dans une colonne de la table hex_map créée à ce effet
@@ -86,11 +98,27 @@ def compute_heat_from_points(hex_map, df, colname="some_name", coeff=1):
     hex_map["heat"] += hex_map[column_names].sum(axis=1) * coeff
     hex_map = hex_map[["nom", "geometry", "heat"]]
     print(f"hex_map mise à jour avec les {index} points de la dataframe")
+    # on sauvegarde la colonne heat dans un csv pour usage futur
+    if heat_csv_name not in os.listdir("data/"):
+        print("heat column saved for later use")
+        hex_map[["heat"]].to_csv(heat_csv_path)
     return hex_map
 
 
-def compute_heat_from_lines(hex_map, df, colname="some_name", coeff=1):
+def compute_heat_from_lines(hex_map, df, name="some_name", coeff=1):
     """Computes heat based on lines crossing hexagons on the hex map"""
+    colname = name
+
+    # TODO check if data already there
+    heat_csv_name = f"{name}_heat.csv"
+    heat_csv_path = f"data/{heat_csv_name}"
+    if heat_csv_name in os.listdir("data/"):
+        # load the data and return the hex map
+        print("loading heat column from cache")
+        heat = pd.read_csv(heat_csv_path)
+        hex_map["loaded_heat"] = heat.heat.to_list()
+        hex_map.heat += hex_map.loaded_heat
+        return hex_map.drop(columns="loaded_heat")
     # on itere sur chaque ligne de la dataframe df, et donc sur chaque point positionné
     for index, (gid, line) in df[["gid", "geometry"]].iterrows():
         # on stocke le résultat du test "l'hexagone contient ce point" dans une colonne de la table hex_map créée à ce effet
@@ -103,11 +131,27 @@ def compute_heat_from_lines(hex_map, df, colname="some_name", coeff=1):
     hex_map["heat"] += hex_map[column_names].sum(axis=1) * coeff
     hex_map = hex_map[["nom", "geometry", "heat"]]
     print(f"hex_map mise à jour avec les {index} points de la dataframe")
+    # on sauvegarde la colonne heat dans un csv pour usage futur
+    if heat_csv_name not in os.listdir("data/"):
+        print("heat column saved for later use")
+        hex_map[["heat"]].to_csv(heat_csv_path)
     return hex_map
 
 
-def compute_heat_train_station(hex_map, df, colname="gare", coeff=3):
+def compute_heat_train_station(hex_map, df, name="gare", coeff=3):
     """#compute_heat_train_station : avoir un moyen que les gares rayonnent leur chaleur sur les hexagones qui les contiennent et les adjacents"""
+    colname = name
+
+    # TODO check if data already there
+    heat_csv_name = f"{name}_heat.csv"
+    heat_csv_path = f"data/{heat_csv_name}"
+    if heat_csv_name in os.listdir("data/"):
+        # load the data and return the hex map
+        print("loading heat column from cache")
+        heat = pd.read_csv(heat_csv_path)
+        hex_map["loaded_heat"] = heat.heat.to_list()
+        hex_map.heat += hex_map.loaded_heat
+        return hex_map.drop(columns="loaded_heat")
 
     if "voyageurs" in df.columns:
         for index, (gid, trafic, polygon) in df[
@@ -173,6 +217,10 @@ def compute_heat_train_station(hex_map, df, colname="gare", coeff=3):
         "heat",
     ]
     hex_map = hex_map[hex_map_columns]
+    # on sauvegarde la colonne heat dans un csv pour usage futur
+    if heat_csv_name not in os.listdir("data/"):
+        print("heat column saved for later use")
+        hex_map[["heat"]].to_csv(heat_csv_path)
     return hex_map
 
 
@@ -462,7 +510,7 @@ def gen_maps(
         hex_map = compute_heat_from_lines(hex_map, ac, "ac", coeff=0.5)
 
     if trains_used:
-        hex_map = compute_heat_train_station(hex_map, gares)
+        hex_map = compute_heat_train_station(hex_map, gares, "gares")
 
     if public_transports_used:
         hex_map = compute_heat_from_points(hex_map, pa, "points_access", coeff=2)

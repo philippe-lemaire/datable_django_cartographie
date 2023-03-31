@@ -6,39 +6,39 @@ from crispy_forms.layout import Submit
 
 class TransportationModesForm(forms.Form):
     own_bike_used = forms.BooleanField(
-        label="Vous utilisez votre vélo",
+        label="🚲 J’utilise mon vélo (aménagement cyclables + stationnement cyclable)",
         required=False,
     )
     velov_used = forms.BooleanField(
-        label="Vous utilisez le service Vélov’",
+        label="🚲 J’utilise les Vélov’ (aménagement cyclables + stations Vélov’)",
         required=False,
     )
     trains_used = forms.BooleanField(
-        label="Gares ferroviaires",
+        label="🚂 Je prends le train (emplacement des gares)",
         required=False,
     )
     cars_used = forms.BooleanField(
-        label="Voitures, autopartage et stationnement auto",
-        required=False,
-    )
-    pmr_used = forms.BooleanField(
-        label="Stationnements Personnes à Mobilité Réduite",
-        required=False,
-    )
-    rhone_buses_used = forms.BooleanField(
-        label="Cars du Rhône",
-        required=False,
-    )
-    public_transports_used = forms.BooleanField(
-        label="Transports en commun (métro, bus, tramway)",
+        label="🚗 Je prends une voiture (stations autopartages, parkings et parcs relais)",
         required=False,
     )
     taxis_used = forms.BooleanField(
-        label="Stations de taxis",
+        label="🚕 Je prends le taxi (emplacement des stations de taxis)",
+        required=False,
+    )
+    pmr_used = forms.BooleanField(
+        label="👩‍🦽 J’utilise les emplacements de stationnements PMR",
+        required=False,
+    )
+    rhone_buses_used = forms.BooleanField(
+        label="🚍 J’utilise les cars du département du Rhône",
+        required=False,
+    )
+    public_transports_used = forms.BooleanField(
+        label="🚇 J’utilise les transports en commun TCL (métro, bus, tramway)",
         required=False,
     )
     river_boat_used = forms.BooleanField(
-        label="Stations navette fluviale",
+        label="🛥️ J’utilise la navette fluviale (emplacement des stations)",
         required=False,
     )
 

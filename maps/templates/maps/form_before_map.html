@@ -3,7 +3,11 @@
 {% block content %}
 
 {% load crispy_forms_tags %}
+<h2>Composition de votre carte de l’intermodalité</h2>
 
-{% crispy form %}
-
+<p>Sélectionnez les offres qui vous concernent pour personnaliser votre carte de chaleur de la Métropole.</p>
+<div class="mx-auto">
+    <br>
+    {% crispy form %}
+</div>
 {% endblock %}

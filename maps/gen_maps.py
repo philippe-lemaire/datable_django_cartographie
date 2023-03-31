@@ -18,6 +18,11 @@ COLORS = {
     "public_transports": "#EB5099",
     "taxis": "#FFC403",
     "river_boats": "#8A77BA",
+    "pmr": "#1688a3",
+    "parkings": "#1940a9",
+    "autopartage": "#6caeda",
+    "relai": "#184677",
+    "velov": "#d1232d",
 }
 
 MARKER_COLORS = [
@@ -148,7 +153,7 @@ def compute_heat_from_lines(hex_map, df, name, coeff=1):
     return hex_map
 
 
-def compute_heat_train_station(hex_map, df, name="gare", coeff=3):
+def compute_heat_train_station(hex_map, df, name="gare", coeff=1):
     """#compute_heat_train_station : avoir un moyen que les gares rayonnent leur chaleur sur les hexagones qui les contiennent et les adjacents"""
     colname = name
 
@@ -558,46 +563,25 @@ def gen_maps(
         column="heat",
         cmap="plasma",
         style_kwds={"opacity": 0.05},
-        legend=None,
+        legend=True,
         **kwargs,
     )
 
     ## add the geometries from datasets used after the hexagon tiles
     # It's a bit too taxing to draw markers for each stationnement vélo
-    """
-    if own_bike_used:
-        # own_bike_marker = folium.Marker(icon=folium.Icon(color="darkpurple", icon="lock-keyhole", prefix="fa"), )
-        # own_bike_marker = None
-        stationnement_velo.explore(color="gray", marker_type=own_bike_marker, **kwargs)
-    """
+
     if velov_used:
-        velov_marker = folium.Marker(
-            icon=folium.Icon(color="red", icon="bicycle", prefix="fa"),
-        )
         velov.drop(columns="gid").explore(
-            # color=COLORS.get("bikes"),
-            marker_type=velov_marker,
+            color=COLORS.get("velov"),
             **kwargs,
         )
 
-    # if own_bike_used or velov_used:
-    #   ac.explore(color=COLORS.get("bikes"), **kwargs)
-
     if cars_used:
-        parking_marker = folium.Marker(
-            icon=folium.Icon(color="cadetblue", icon="square-parking", prefix="fa"),
-        )
-        pr_marker = folium.Marker(
-            icon=folium.Icon(color="lightred", icon="square-parking", prefix="fa"),
-        )
-        autopartage_marker = folium.Marker(
-            icon=folium.Icon(color="lightblue", icon="square-parking", prefix="fa"),
-        )
-        parkings.drop(columns="gid").explore(marker_type=parking_marker, **kwargs)
+        parkings.drop(columns="gid").explore(color=COLORS.get("parkings"), **kwargs)
         autopartage.drop(columns="gid").explore(
-            marker_type=autopartage_marker, **kwargs
+            color=COLORS.get("autopartage"), **kwargs
         )
-        pr.drop(columns="gid").explore(marker_type=pr_marker, **kwargs)
+        pr.drop(columns="gid").explore(color=COLORS.get("relai"), **kwargs)
 
     if trains_used:
         gares.explore(color=COLORS.get("train_stations"), **kwargs)
@@ -623,20 +607,15 @@ def gen_maps(
         )
 
     if taxis_used:
-        taxi_marker = folium.Marker(
-            icon=folium.Icon(color="lightgray", icon="taxi", prefix="fa"),
-        )
-        taxis.drop(columns="gid").explore(marker_type=taxi_marker, **kwargs)
+
+        taxis.drop(columns="gid").explore(color=COLORS.get("taxis"), **kwargs)
 
     if rhone_buses_used:
         cars.drop(columns=["gid", "stop_id"]).explore(
             color=COLORS.get("buses"), **kwargs
         )
     if pmr_used:
-        pmr_marker = folium.Marker(
-            icon=folium.Icon(color="darkblue", icon="wheelchair", prefix="fa"),
-        )
-        pmr.drop(columns="gid").explore(marker_type=pmr_marker, **kwargs)
+        pmr.drop(columns="gid").explore(color=COLORS.get("pmr"), **kwargs)
     # create the export path
     os.makedirs(EXPORT_PATH, exist_ok=True)
     # save the map

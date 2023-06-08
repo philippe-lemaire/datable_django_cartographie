@@ -559,7 +559,7 @@ def gen_maps(
         hex_map = compute_heat_from_points(hex_map, pmr, "pmr", coeff=1)
 
     ## add the hex_map with heat first, then the points
-    hex_map.explore(
+    hex_map.reset_index().drop(columns=["h3_polyfill"]).explore(
         column="heat",
         cmap="plasma",
         style_kwds={"opacity": 0.05},
@@ -569,7 +569,14 @@ def gen_maps(
 
     ## add the geometries from datasets used after the hexagon tiles
     # It's a bit too taxing to draw markers for each stationnement vélo
-
+    if own_bike_used:
+        stationnement_velo["type"] = "stationnement vélo"
+        stationnement_velo[
+            ["type", "nom", "adresse", "commune", "capacite", "geometry"]
+        ].explore(
+            color=COLORS.get("velov"),
+            **kwargs,
+        )
     if velov_used:
         velov.drop(columns="gid").explore(
             color=COLORS.get("velov"),
@@ -577,6 +584,7 @@ def gen_maps(
         )
 
     if cars_used:
+        parkings["type"] = "parking"
         parkings.drop(columns="gid").explore(color=COLORS.get("parkings"), **kwargs)
         autopartage.drop(columns="gid").explore(
             color=COLORS.get("autopartage"), **kwargs
@@ -596,6 +604,7 @@ def gen_maps(
             ).add_to(m)
 
     if public_transports_used:
+        pa["type"] = "arrêt transports en commun"
         pa.drop(columns="gid").explore(color=COLORS.get("public_transports"), **kwargs)
 
     if river_boat_used:
@@ -607,7 +616,6 @@ def gen_maps(
         )
 
     if taxis_used:
-
         taxis.drop(columns="gid").explore(color=COLORS.get("taxis"), **kwargs)
 
     if rhone_buses_used:
@@ -615,7 +623,10 @@ def gen_maps(
             color=COLORS.get("buses"), **kwargs
         )
     if pmr_used:
-        pmr.drop(columns="gid").explore(color=COLORS.get("pmr"), **kwargs)
+        pmr["type"] = "Stationnement PMR"
+        pmr[["type", "commune", "nom", "geometry"]].explore(
+            color=COLORS.get("pmr"), **kwargs
+        )
     # create the export path
     os.makedirs(EXPORT_PATH, exist_ok=True)
     # save the map
